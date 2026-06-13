@@ -128,6 +128,21 @@ export default function UserDetailsScreen() {
     }
   };
 
+  // Check if Google user
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
+
+  useEffect(() => {
+    const checkUserProvider = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.app_metadata?.provider === 'google' || !session?.user?.phone) {
+          setIsGoogleUser(true);
+        }
+      } catch {}
+    };
+    checkUserProvider();
+  }, []);
+
   // Validate individual field
   const validateField = (fieldName: string, value: string | null) => {
     const newErrors = { ...errors };
@@ -161,7 +176,9 @@ export default function UserDetailsScreen() {
         break;
 
       case 'phoneNumber':
-        if (!value?.trim()) {
+        if (isGoogleUser && !value?.trim()) {
+          delete newErrors.phoneNumber;
+        } else if (!value?.trim()) {
           newErrors.phoneNumber = 'Phone number is required';
         } else {
           const phoneRegex = /^[0-9]{10}$/;
@@ -221,7 +238,9 @@ export default function UserDetailsScreen() {
     }
 
     // Phone number validation
-    if (!phoneNumber.trim()) {
+    if (isGoogleUser && !phoneNumber.trim()) {
+      // Optional for Google users
+    } else if (!phoneNumber.trim()) {
       newErrors.phoneNumber = 'Phone number is required';
     } else {
       const phoneRegex = /^[0-9]{10}$/;
@@ -264,11 +283,15 @@ export default function UserDetailsScreen() {
 
   const saveProfile = async () => {
     const authStore = useAuthStore.getState();
-    const { patientId: storePatientId, phoneNumber: storePhone } = authStore;
-    
-    // Use phone number as the source of truth for new users
-    const userPhone = normalizePhone(phoneNumber);
-    if (!userPhone) {
+    const resolvedId = authStore.userId || patientId;
+
+    if (!resolvedId) {
+      Alert.alert('Error', 'Session expired. Please log in again.');
+      return;
+    }
+
+    const userPhone = phoneNumber ? normalizePhone(phoneNumber) : null;
+    if (!isGoogleUser && !userPhone) {
       Alert.alert('Error', 'Invalid phone number');
       return;
     }
@@ -276,73 +299,53 @@ export default function UserDetailsScreen() {
     setIsSaving(true);
     try {
       console.log('=== Saving User Profile ===');
-      console.log('Phone:', userPhone, 'Name:', name, 'Age:', age, 'Gender:', gender);
+      console.log('Id:', resolvedId, 'Phone:', userPhone, 'Name:', name, 'Age:', age, 'Gender:', gender);
 
-      // Check if user already exists by phone
-      const { data: existingUser } = await supabase
+      // Upsert user profile to Supabase
+      const profilePayload = {
+        id: resolvedId,
+        name: name.trim(),
+        age: parseInt(age),
+        phone: userPhone || null,
+        gender: gender,
+        location: location.trim(),
+      };
+
+      const { data, error } = await supabase
         .from('users')
-        .select('id')
-        .eq('phone', userPhone)
-        .maybeSingle();
+        .upsert(profilePayload)
+        .select()
+        .single();
 
-      console.log('Existing user:', existingUser?.id);
-
-      let userId = existingUser?.id;
-
-      // If user doesn't exist, insert new record
-      if (!userId) {
-        console.log('Creating new user record');
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert({
-            name: name.trim(),
-            age: parseInt(age),
-            phone: userPhone,
-            gender: gender,
-          })
-          .select('id')
-          .maybeSingle();
-
-        if (insertError) {
-          console.error('Insert error:', insertError);
-          Alert.alert('Error Saving Profile', 'Failed to create user: ' + insertError.message);
-          setIsSaving(false);
-          return;
-        }
-
-        userId = newUser?.id;
-        console.log('New user created with ID:', userId);
-      } else {
-        // Update existing user
-        console.log('Updating existing user:', userId);
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({
-            name: name.trim(),
-            age: parseInt(age),
-            gender: gender,
-          })
-          .eq('id', userId);
-
-        if (updateError) {
-          console.error('Update error:', updateError);
-          Alert.alert('Error Saving Profile', updateError.message);
-          setIsSaving(false);
-          return;
-        }
+      if (error) {
+        console.error('Supabase upsert error:', error);
+        throw error;
       }
 
-      // Update auth store with real user ID
+      const savedData = data || profilePayload;
+
+      // Update auth store with resolved details
       authStore.setSessionState({
-        userId: userId,
-        patientId: userId,
-        phoneNumber: userPhone,
+        userId: resolvedId,
+        patientId: resolvedId,
+        phoneNumber: userPhone || null,
         isLoggedIn: true,
         hasProfile: true,
-        hasFamilyGroup: false,
+        hasFamilyGroup: Boolean(savedData.family_id),
       });
 
-      console.log('Profile saved successfully, user ID:', userId);
+      // Save user session for persistence
+      const { saveUserSession } = await import('@/services/auth.service');
+      await saveUserSession(userPhone || '', resolvedId);
+
+      // Save patient profile payload to AsyncStorage
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      await AsyncStorage.setItem(`user_profile_${resolvedId}`, JSON.stringify(savedData));
+      if (userPhone) {
+        await AsyncStorage.setItem(`user_profile_${userPhone}`, JSON.stringify(savedData));
+      }
+
+      console.log('Profile saved successfully, user ID:', resolvedId);
       setIsSaving(false);
       router.push('/(onboarding)/family-setup');
     } catch (error: any) {
@@ -353,9 +356,13 @@ export default function UserDetailsScreen() {
   };
 
   const isFormValid = () => {
+    const phoneValid = isGoogleUser 
+      ? (!phoneNumber.trim() || normalizePhone(phoneNumber).length === 10)
+      : (phoneNumber.trim() && normalizePhone(phoneNumber).length === 10);
+
     return name.trim() &&
       age.trim() &&
-      normalizePhone(phoneNumber).length === 10 &&
+      phoneValid &&
       gender &&
       location.trim() &&
       !errors.name &&
