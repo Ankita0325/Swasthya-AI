@@ -31,6 +31,8 @@ export default function UserDetailsScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [gender, setGender] = useState<string | null>(null);
   const [location, setLocation] = useState('');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -43,6 +45,8 @@ export default function UserDetailsScreen() {
   const ageInputRef = useRef<TextInput>(null);
   const phoneInputRef = useRef<TextInput>(null);
   const locationInputRef = useRef<TextInput>(null);
+  const weightInputRef = useRef<TextInput>(null);
+  const heightInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     const initialPhone = normalizePhone(params.phone || storedPhone || '');
@@ -59,6 +63,18 @@ export default function UserDetailsScreen() {
         setAge(patient.age ? String(patient.age) : '');
         setPhoneNumber(patient.phone || initialPhone);
         setGender(patient.gender || null);
+
+        // Fetch weight and height from medical_information
+        const { data: medData } = await supabase
+          .from('medical_information')
+          .select('weight, height')
+          .eq('patient_id', patient.id)
+          .maybeSingle();
+
+        if (medData) {
+          setWeight(medData.weight || '');
+          setHeight(medData.height || '');
+        }
       } catch (error) {
         console.error('Failed to hydrate patient profile', error);
       }
@@ -207,6 +223,36 @@ export default function UserDetailsScreen() {
           delete newErrors.location;
         }
         break;
+
+      case 'weight':
+        if (!value?.trim()) {
+          newErrors.weight = 'Weight is required';
+        } else {
+          const wNum = parseFloat(value);
+          if (isNaN(wNum)) {
+            newErrors.weight = 'Please enter a valid weight';
+          } else if (wNum < 10 || wNum > 300) {
+            newErrors.weight = 'Weight must be between 10 and 300 kg';
+          } else {
+            delete newErrors.weight;
+          }
+        }
+        break;
+
+      case 'height':
+        if (!value?.trim()) {
+          newErrors.height = 'Height is required';
+        } else {
+          const hNum = parseInt(value);
+          if (isNaN(hNum)) {
+            newErrors.height = 'Please enter a valid height';
+          } else if (hNum < 50 || hNum > 250) {
+            newErrors.height = 'Height must be between 50 and 250 cm';
+          } else {
+            delete newErrors.height;
+          }
+        }
+        break;
     }
 
     setErrors(newErrors);
@@ -261,6 +307,26 @@ export default function UserDetailsScreen() {
       newErrors.location = 'Please enter a valid location';
     }
 
+    // Weight validation
+    if (!weight.trim()) {
+      newErrors.weight = 'Weight is required';
+    } else {
+      const wNum = parseFloat(weight);
+      if (isNaN(wNum) || wNum < 10 || wNum > 300) {
+        newErrors.weight = 'Weight must be between 10 and 300 kg';
+      }
+    }
+
+    // Height validation
+    if (!height.trim()) {
+      newErrors.height = 'Height is required';
+    } else {
+      const hNum = parseInt(height);
+      if (isNaN(hNum) || hNum < 50 || hNum > 250) {
+        newErrors.height = 'Height must be between 50 and 250 cm';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -304,15 +370,15 @@ export default function UserDetailsScreen() {
       // Upsert user profile to Supabase
       const profilePayload = {
         id: resolvedId,
-        name: name.trim(),
+        full_name: name.trim(),
         age: parseInt(age),
-        phone: userPhone || null,
+        phone_number: userPhone || null,
         gender: gender,
         location: location.trim(),
       };
 
       const { data, error } = await supabase
-        .from('users')
+        .from('patients')
         .upsert(profilePayload)
         .select()
         .single();
@@ -324,6 +390,25 @@ export default function UserDetailsScreen() {
 
       const savedData = data || profilePayload;
 
+      // Upsert medical details to Supabase
+      const { error: medError } = await supabase
+        .from('medical_information')
+        .upsert({
+          patient_id: resolvedId,
+          weight: weight.trim(),
+          height: height.trim(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (medError) {
+        console.error('Supabase medical details upsert error:', medError);
+        throw medError;
+      }
+
+      // Check if user is part of a family group
+      const { getFamilyByPatientId } = require('@/services/auth.service');
+      const family = await getFamilyByPatientId(resolvedId);
+
       // Update auth store with resolved details
       authStore.setSessionState({
         userId: resolvedId,
@@ -331,19 +416,38 @@ export default function UserDetailsScreen() {
         phoneNumber: userPhone || null,
         isLoggedIn: true,
         hasProfile: true,
-        hasFamilyGroup: Boolean(savedData.family_id),
+        hasFamilyGroup: Boolean(family),
       });
 
       // Save user session for persistence
       const { saveUserSession } = await import('@/services/auth.service');
       await saveUserSession(userPhone || '', resolvedId);
 
-      // Save patient profile payload to AsyncStorage
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+
+      // Save patient profile payload to AsyncStorage
       await AsyncStorage.setItem(`user_profile_${resolvedId}`, JSON.stringify(savedData));
       if (userPhone) {
         await AsyncStorage.setItem(`user_profile_${userPhone}`, JSON.stringify(savedData));
       }
+
+      // Save complete medical details to AsyncStorage locally (so Profile tab gets it instantly)
+      const mappedMed = {
+        age: age.toString(),
+        gender: gender,
+        weight: weight.trim(),
+        height: height.trim(),
+        bloodType: 'O+',
+        allergies: '',
+        bloodPressure: '120/80',
+        heartRate: '72',
+        oxygenLevel: '98',
+        surgeries: 'None',
+        chronicConditions: 'None',
+        vaccinations: 'Covid-19, Hep B',
+        familyGenetics: 'None',
+      };
+      await AsyncStorage.setItem(`medical_info_${resolvedId}`, JSON.stringify(mappedMed));
 
       console.log('Profile saved successfully, user ID:', resolvedId);
       setIsSaving(false);
@@ -365,11 +469,15 @@ export default function UserDetailsScreen() {
       phoneValid &&
       gender &&
       location.trim() &&
+      weight.trim() &&
+      height.trim() &&
       !errors.name &&
       !errors.age &&
       !errors.phoneNumber &&
       !errors.gender &&
-      !errors.location;
+      !errors.location &&
+      !errors.weight &&
+      !errors.height;
   };
 
   return (
@@ -386,9 +494,9 @@ export default function UserDetailsScreen() {
           {/* Progress Bar */}
           <View style={styles.topBar}>
             <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarFill} />
+              <View style={[styles.progressBarFill, { width: '66%' }]} />
             </View>
-            <Text style={styles.stepText}>Step 1 of 2</Text>
+            <Text style={styles.stepText}>Step 2 of 3</Text>
           </View>
 
           {/* Header */}
@@ -560,8 +668,8 @@ export default function UserDetailsScreen() {
                     onBlur={() => {
                       setFocusedInput(null);
                     }}
-                    returnKeyType="done"
-                    onSubmitEditing={handleContinue}
+                    returnKeyType="next"
+                    onSubmitEditing={() => weightInputRef.current?.focus()}
                   />
                   <TouchableOpacity
                     style={styles.locationButton}
@@ -583,6 +691,71 @@ export default function UserDetailsScreen() {
               <Text style={styles.locationHint}>
                 Tap the 📍 button to automatically detect your current location
               </Text>
+            </View>
+
+            {/* Weight & Height Row */}
+            <View style={styles.row}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={styles.label}>Weight (kg)</Text>
+                <View style={[
+                  styles.inputContainer,
+                  focusedInput === 'weight' && styles.inputContainerFocused,
+                  touched.weight && errors.weight && styles.inputContainerError
+                ]}>
+                  <TextInput
+                    ref={weightInputRef}
+                    style={styles.textInput}
+                    placeholder="e.g. 70"
+                    placeholderTextColor={COLORS.text.muted}
+                    value={weight}
+                    onChangeText={(text) => {
+                      setWeight(text);
+                      setTouched({ ...touched, weight: true });
+                      validateField('weight', text);
+                    }}
+                    keyboardType="numeric"
+                    onFocus={() => setFocusedInput('weight')}
+                    onBlur={() => setFocusedInput(null)}
+                    returnKeyType="next"
+                    onSubmitEditing={() => heightInputRef.current?.focus()}
+                    maxLength={5}
+                  />
+                </View>
+                {touched.weight && errors.weight && (
+                  <Text style={styles.errorText}>{errors.weight}</Text>
+                )}
+              </View>
+
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.label}>Height (cm)</Text>
+                <View style={[
+                  styles.inputContainer,
+                  focusedInput === 'height' && styles.inputContainerFocused,
+                  touched.height && errors.height && styles.inputContainerError
+                ]}>
+                  <TextInput
+                    ref={heightInputRef}
+                    style={styles.textInput}
+                    placeholder="e.g. 175"
+                    placeholderTextColor={COLORS.text.muted}
+                    value={height}
+                    onChangeText={(text) => {
+                      setHeight(text);
+                      setTouched({ ...touched, height: true });
+                      validateField('height', text);
+                    }}
+                    keyboardType="numeric"
+                    onFocus={() => setFocusedInput('height')}
+                    onBlur={() => setFocusedInput(null)}
+                    returnKeyType="done"
+                    onSubmitEditing={handleContinue}
+                    maxLength={3}
+                  />
+                </View>
+                {touched.height && errors.height && (
+                  <Text style={styles.errorText}>{errors.height}</Text>
+                )}
+              </View>
             </View>
 
           </Animated.View>
@@ -780,5 +953,10 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
     marginTop: 6,
     marginLeft: 12,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
 });

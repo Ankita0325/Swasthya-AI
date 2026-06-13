@@ -1,19 +1,17 @@
 // app/services/auth.service.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// Pure AsyncStorage auth — no Supabase, no phone OTP required.
+// Real Supabase Integration for Swasthya AI Auth
 // ─────────────────────────────────────────────────────────────────────────────
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/config/supabase';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+
+// Initialize WebBrowser for OAuth redirects
+WebBrowser.maybeCompleteAuthSession();
 
 // ── Key constants ─────────────────────────────────────────────────────────────
-const KEY_IS_LOGGED_IN       = 'isLoggedIn';
-const KEY_JWT_TOKEN          = 'jwt_token';
-const KEY_USER_EMAIL         = 'userEmail';
-const KEY_USER_NAME          = 'userName';
-const KEY_USER_ID            = 'current_user_id';
-const KEY_ONBOARDING_DONE    = 'onboardingComplete';
-const PROFILE_PREFIX         = 'user_profile_';
-const FAMILY_PREFIX          = 'family_';
-const FAMILY_MEMBERS_PREFIX  = 'family_members_';
+const KEY_ONBOARDING_DONE = 'onboardingComplete';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface PatientRecord {
@@ -39,43 +37,48 @@ export interface FamilyRecord {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 export const normalizePhone = (value: string) => value.replace(/\D/g, '').slice(-10);
 
-const generateMockJWT = (email: string): string =>
-  `jwt_${email}_${Date.now()}`;
-
-const emailToId = (email: string): string =>
-  `user_${email.replace(/[@.]/g, '_')}`;
-
 // ── Sign Up ───────────────────────────────────────────────────────────────────
 export const signUp = async (name: string, email: string, password: string): Promise<PatientRecord> => {
-  const id = emailToId(email);
-  const jwt = generateMockJWT(email);
-
-  const user: PatientRecord = {
-    id,
-    name: name.trim(),
+  const { data, error } = await supabase.auth.signUp({
     email: email.toLowerCase().trim(),
+    password: password,
+    options: {
+      data: {
+        full_name: name.trim(),
+      }
+    }
+  });
+
+  if (error) throw error;
+  if (!data.user) throw new Error('Registration failed: no user returned');
+
+  // Insert basic patient record into the 'patients' table in public schema
+  try {
+    const { error: dbError } = await supabase
+      .from('patients')
+      .insert({
+        id: data.user.id,
+        full_name: name.trim(),
+        email: data.user.email,
+        created_at: new Date().toISOString(),
+      });
+    if (dbError) {
+      console.warn('Patient table insert failed during signup:', dbError.message);
+    }
+  } catch (dbErr) {
+    console.error('Failed to create user DB row:', dbErr);
+  }
+
+  return {
+    id: data.user.id,
+    name: name.trim(),
+    email: data.user.email,
     age: null,
     gender: null,
     phone: null,
     family_id: null,
     created_at: new Date().toISOString(),
   };
-
-  // Persist account record
-  await AsyncStorage.multiSet([
-    [KEY_IS_LOGGED_IN,    'true'],
-    [KEY_JWT_TOKEN,       jwt],
-    [KEY_USER_EMAIL,      email.toLowerCase().trim()],
-    [KEY_USER_NAME,       name.trim()],
-    [KEY_USER_ID,         id],
-    [KEY_ONBOARDING_DONE, 'false'],
-    [`${PROFILE_PREFIX}${id}`,    JSON.stringify(user)],
-    [`${PROFILE_PREFIX}${email.toLowerCase().trim()}`, JSON.stringify(user)],
-    // Persist password (hashed in production; here stored plaintext for demo)
-    [`pwd_${email.toLowerCase().trim()}`, password],
-  ]);
-
-  return user;
 };
 
 // ── Sign In ───────────────────────────────────────────────────────────────────
@@ -86,35 +89,39 @@ export interface SignInResult {
 }
 
 export const signIn = async (email: string, password: string): Promise<SignInResult> => {
-  const normalizedEmail = email.toLowerCase().trim();
-  const id = emailToId(normalizedEmail);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.toLowerCase().trim(),
+    password: password,
+  });
 
-  // Check stored password
-  const storedPassword = await AsyncStorage.getItem(`pwd_${normalizedEmail}`);
-  if (storedPassword === null) {
-    return { success: false, error: 'Account not found. Please Sign Up first.' };
-  }
-  if (storedPassword !== password) {
-    return { success: false, error: 'Incorrect password. Please try again.' };
+  if (error) {
+    return { success: false, error: error.message };
   }
 
-  // Load profile
-  const profileStr = await AsyncStorage.getItem(`${PROFILE_PREFIX}${id}`);
-  const user: PatientRecord = profileStr
-    ? JSON.parse(profileStr)
-    : { id, name: normalizedEmail, email: normalizedEmail, age: null, gender: null, phone: null, family_id: null };
+  if (!data.user) {
+    return { success: false, error: 'User not found.' };
+  }
 
-  const jwt = generateMockJWT(normalizedEmail);
+  // Load profile from DB if exists
+  let patient: PatientRecord | null = null;
+  try {
+    patient = await getPatientById(data.user.id);
+  } catch (e) {
+    console.warn('Error loading patient details after signin:', e);
+  }
 
-  await AsyncStorage.multiSet([
-    [KEY_IS_LOGGED_IN, 'true'],
-    [KEY_JWT_TOKEN,    jwt],
-    [KEY_USER_EMAIL,   normalizedEmail],
-    [KEY_USER_NAME,    user.name],
-    [KEY_USER_ID,      id],
-  ]);
+  const userRecord: PatientRecord = patient || {
+    id: data.user.id,
+    name: data.user.user_metadata?.full_name || email.split('@')[0],
+    email: data.user.email,
+    age: null,
+    gender: null,
+    phone: null,
+    family_id: null,
+    created_at: new Date().toISOString(),
+  };
 
-  return { success: true, user };
+  return { success: true, user: userRecord };
 };
 
 // ── Session ───────────────────────────────────────────────────────────────────
@@ -132,56 +139,85 @@ export interface SessionData {
 }
 
 export const getCurrentSession = async (): Promise<SessionData | null> => {
-  const [isLoggedIn, jwt, userId, email] = await Promise.all([
-    AsyncStorage.getItem(KEY_IS_LOGGED_IN),
-    AsyncStorage.getItem(KEY_JWT_TOKEN),
-    AsyncStorage.getItem(KEY_USER_ID),
-    AsyncStorage.getItem(KEY_USER_EMAIL),
-  ]);
-
-  if (isLoggedIn !== 'true' || !jwt || !userId) return null;
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session) return null;
 
   return {
     user: {
-      id: userId,
-      email: email,
-      phone: null,
-      is_anonymous: false,
+      id: session.user.id,
+      email: session.user.email ?? null,
+      phone: session.user.phone ?? null,
+      is_anonymous: session.user.is_anonymous ?? false,
       user_metadata: {
-        patient_id: userId,
-        phone: null,
+        patient_id: session.user.id,
+        phone: session.user.phone ?? null,
       },
     },
   };
 };
 
 export const signOut = async (): Promise<void> => {
+  await supabase.auth.signOut();
   await AsyncStorage.multiRemove([
-    KEY_IS_LOGGED_IN,
-    KEY_JWT_TOKEN,
-    KEY_USER_EMAIL,
-    KEY_USER_NAME,
-    KEY_USER_ID,
     KEY_ONBOARDING_DONE,
+    'current_user_id',
+    'current_user_phone',
   ]);
 };
 
 // ── Patient helpers ───────────────────────────────────────────────────────────
 export const getPatientById = async (id: string): Promise<PatientRecord | null> => {
-  const str = await AsyncStorage.getItem(`${PROFILE_PREFIX}${id}`);
-  return str ? JSON.parse(str) : null;
+  const { data, error } = await supabase
+    .from('patients')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  // Query family info from family_members mapping table
+  const family = await getFamilyByPatientId(id);
+
+  return {
+    id: data.id,
+    name: data.full_name,
+    email: data.email,
+    age: data.age,
+    gender: data.gender,
+    phone: data.phone_number,
+    family_id: family?.id ?? null,
+    created_at: data.created_at,
+  };
 };
 
 export const getPatientByPhone = async (phone: string): Promise<PatientRecord | null> => {
   const normalized = normalizePhone(phone);
-  const str = await AsyncStorage.getItem(`${PROFILE_PREFIX}${normalized}`);
-  return str ? JSON.parse(str) : null;
+  const { data, error } = await supabase
+    .from('patients')
+    .select('*')
+    .eq('phone_number', normalized)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const family = await getFamilyByPatientId(data.id);
+
+  return {
+    id: data.id,
+    name: data.full_name,
+    email: data.email,
+    age: data.age,
+    gender: data.gender,
+    phone: data.phone_number,
+    family_id: family?.id ?? null,
+    created_at: data.created_at,
+  };
 };
 
 export const getCurrentPatient = async (): Promise<PatientRecord | null> => {
-  const id = await AsyncStorage.getItem(KEY_USER_ID);
-  if (!id) return null;
-  return getPatientById(id);
+  const session = await getCurrentSession();
+  if (!session) return null;
+  return getPatientById(session.user.id);
 };
 
 export const savePatientProfile = async (input: {
@@ -192,35 +228,44 @@ export const savePatientProfile = async (input: {
   phone?: string | null;
   familyId?: string | null;
 }): Promise<PatientRecord> => {
-  const resolvedId = input.patientId ?? (await AsyncStorage.getItem(KEY_USER_ID)) ?? `user_${Date.now()}`;
-  const email = await AsyncStorage.getItem(KEY_USER_EMAIL);
+  const { data: { session } } = await supabase.auth.getSession();
+  const resolvedId = input.patientId ?? session?.user.id;
+  if (!resolvedId) throw new Error('No active user session');
 
-  const existing = await getPatientById(resolvedId);
+  const normalizedPhone = input.phone ? normalizePhone(input.phone) : null;
 
-  const payload: PatientRecord = {
-    ...existing,
+  const dbPayload = {
     id: resolvedId,
-    name: input.name.trim(),
+    full_name: input.name.trim(),
     age: input.age,
     gender: input.gender,
-    phone: input.phone ? normalizePhone(input.phone) : existing?.phone ?? null,
-    family_id: input.familyId ?? existing?.family_id ?? null,
-    email: email ?? existing?.email ?? null,
+    phone_number: normalizedPhone,
+    email: session?.user.email,
   };
 
-  const pairs: [string, string][] = [
-    [`${PROFILE_PREFIX}${resolvedId}`, JSON.stringify(payload)],
-    [KEY_USER_ID, resolvedId],
-  ];
-  if (payload.phone) pairs.push([`${PROFILE_PREFIX}${payload.phone}`, JSON.stringify(payload)]);
-  await AsyncStorage.multiSet(pairs);
+  const { data, error } = await supabase
+    .from('patients')
+    .upsert(dbPayload)
+    .select()
+    .single();
 
-  return payload;
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    name: data.full_name,
+    email: data.email,
+    age: data.age,
+    gender: data.gender,
+    phone: data.phone_number,
+    family_id: input.familyId ?? null,
+    created_at: data.created_at,
+  };
 };
 
 export const saveUserSession = async (phone: string, userId: string): Promise<void> => {
   const normalized = phone ? normalizePhone(phone) : '';
-  const pairs: [string, string][] = [[KEY_USER_ID, userId]];
+  const pairs: [string, string][] = [['current_user_id', userId]];
   if (normalized) pairs.push(['current_user_phone', normalized]);
   await AsyncStorage.multiSet(pairs);
 };
@@ -233,36 +278,64 @@ export const ensureUserRowForSession = async (input: {
   const existing = await getPatientById(input.userId);
   if (existing) return existing;
 
-  const user: PatientRecord = {
+  const normalizedPhone = input.phone ? normalizePhone(input.phone) : null;
+  const dbPayload = {
     id: input.userId,
-    name: input.name?.trim() ?? 'User',
-    phone: input.phone ? normalizePhone(input.phone) : null,
-    age: null,
-    gender: null,
-    family_id: null,
+    full_name: input.name?.trim() ?? 'User',
+    phone_number: normalizedPhone,
     created_at: new Date().toISOString(),
   };
 
-  await AsyncStorage.setItem(`${PROFILE_PREFIX}${input.userId}`, JSON.stringify(user));
-  return user;
+  const { data, error } = await supabase
+    .from('patients')
+    .upsert(dbPayload)
+    .select()
+    .single();
+
+  if (error) return null;
+
+  return {
+    id: data.id,
+    name: data.full_name,
+    email: data.email,
+    age: data.age,
+    gender: data.gender,
+    phone: data.phone_number,
+    family_id: null,
+    created_at: data.created_at,
+  };
 };
 
 export const createPhoneAuthUser = async (phone: string, name?: string): Promise<PatientRecord | null> => {
   const normalized = normalizePhone(phone);
   if (!normalized) return null;
   const id = `user_${normalized}`;
-  const user: PatientRecord = {
+  
+  const dbPayload = {
     id,
-    name: name?.trim() ?? 'User',
-    phone: normalized,
-    age: null,
-    gender: null,
-    family_id: null,
+    full_name: name?.trim() ?? 'User',
+    phone_number: normalized,
     created_at: new Date().toISOString(),
   };
-  await AsyncStorage.setItem(`${PROFILE_PREFIX}${id}`, JSON.stringify(user));
-  await AsyncStorage.setItem(`${PROFILE_PREFIX}${normalized}`, JSON.stringify(user));
-  return user;
+
+  const { data, error } = await supabase
+    .from('patients')
+    .upsert(dbPayload)
+    .select()
+    .single();
+
+  if (error) return null;
+
+  return {
+    id: data.id,
+    name: data.full_name,
+    email: data.email,
+    age: data.age,
+    gender: data.gender,
+    phone: data.phone_number,
+    family_id: null,
+    created_at: data.created_at,
+  };
 };
 
 // ── Onboarding flag ───────────────────────────────────────────────────────────
@@ -275,91 +348,192 @@ export const isOnboardingComplete = async (): Promise<boolean> => {
   return val === 'true';
 };
 
-// ── Family helpers (unchanged from before) ────────────────────────────────────
+// ── Family helpers (Aligned with Patients, FamilyGroups, FamilyMembers schema) ──
 export const createFamilyForPatient = async (familyName: string, patient: PatientRecord) => {
   const joinCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const familyId = `family_${joinCode}`;
+
+  // 1. Insert into family_groups
+  const { data: familyGroup, error: familyError } = await supabase
+    .from('family_groups')
+    .insert({
+      family_name: familyName.trim(),
+      family_code: joinCode,
+      created_by: patient.id,
+    })
+    .select()
+    .single();
+
+  if (familyError) throw familyError;
+
+  // 2. Add creator to family_members as admin
+  const { error: memberError } = await supabase
+    .from('family_members')
+    .insert({
+      family_id: familyGroup.id,
+      patient_id: patient.id,
+      role: 'admin',
+    });
+
+  if (memberError) throw memberError;
 
   const family: FamilyRecord = {
-    id: familyId,
-    family_name: familyName.trim(),
+    id: familyGroup.id,
+    family_name: familyGroup.family_name,
     qr_code: `SWASTHYA_FAMILY:${joinCode}`,
-    created_by: patient.id,
-    created_at: new Date().toISOString(),
+    created_by: familyGroup.created_by,
+    created_at: familyGroup.created_at,
     join_code: joinCode,
   };
-
-  const updatedPatient = { ...patient, family_id: familyId };
-  const memberList = [{ id: `member_${patient.id}`, family_id: familyId, patient_id: patient.id, role: 'admin', patient: updatedPatient }];
-
-  await AsyncStorage.multiSet([
-    [`${FAMILY_PREFIX}${joinCode}`, JSON.stringify(family)],
-    [`${FAMILY_PREFIX}${familyId}`, JSON.stringify(family)],
-    [`${PROFILE_PREFIX}${patient.id}`, JSON.stringify(updatedPatient)],
-    [`${FAMILY_MEMBERS_PREFIX}${familyId}`, JSON.stringify(memberList)],
-  ]);
-  if (patient.phone) await AsyncStorage.setItem(`${PROFILE_PREFIX}${patient.phone}`, JSON.stringify(updatedPatient));
 
   return { family, joinCode };
 };
 
 export const joinFamilyForPatient = async (joinCode: string, patient: PatientRecord) => {
   const normalizedCode = joinCode.trim();
-  let familyStr = await AsyncStorage.getItem(`${FAMILY_PREFIX}${normalizedCode}`);
 
-  if (!familyStr) {
-    const mockFamilyId = `family_${normalizedCode}`;
-    const mockFamily: FamilyRecord = {
-      id: mockFamilyId,
-      family_name: 'Family',
-      qr_code: `SWASTHYA_FAMILY:${normalizedCode}`,
-      created_by: 'external-user',
-      created_at: new Date().toISOString(),
-      join_code: normalizedCode,
-    };
-    await AsyncStorage.multiSet([
-      [`${FAMILY_PREFIX}${normalizedCode}`, JSON.stringify(mockFamily)],
-      [`${FAMILY_PREFIX}${mockFamilyId}`, JSON.stringify(mockFamily)],
-    ]);
-    familyStr = JSON.stringify(mockFamily);
-  }
+  // 1. Find family group by 6-digit code
+  const { data: familyGroup, error: familyError } = await supabase
+    .from('family_groups')
+    .select('*')
+    .eq('family_code', normalizedCode)
+    .maybeSingle();
 
-  const family = JSON.parse(familyStr) as FamilyRecord;
-  const familyId = family.id;
+  if (familyError) throw familyError;
+  if (!familyGroup) throw new Error('Family group not found for the given code');
 
-  const updatedPatient = { ...patient, family_id: familyId };
-  await AsyncStorage.setItem(`${PROFILE_PREFIX}${patient.id}`, JSON.stringify(updatedPatient));
-  if (patient.phone) await AsyncStorage.setItem(`${PROFILE_PREFIX}${patient.phone}`, JSON.stringify(updatedPatient));
+  // 2. Add patient to family_members mapping table
+  const { error: memberError } = await supabase
+    .from('family_members')
+    .upsert({
+      family_id: familyGroup.id,
+      patient_id: patient.id,
+      role: 'member',
+    }, { onConflict: 'family_id,patient_id' });
 
-  const memberListStr = await AsyncStorage.getItem(`${FAMILY_MEMBERS_PREFIX}${familyId}`);
-  const memberList = memberListStr ? JSON.parse(memberListStr) : [];
-  if (!memberList.some((m: any) => m.patient_id === patient.id)) {
-    memberList.push({ id: `member_${patient.id}`, family_id: familyId, patient_id: patient.id, role: 'member', patient: updatedPatient });
-    await AsyncStorage.setItem(`${FAMILY_MEMBERS_PREFIX}${familyId}`, JSON.stringify(memberList));
-  }
+  if (memberError) throw memberError;
+
+  const family: FamilyRecord = {
+    id: familyGroup.id,
+    family_name: familyGroup.family_name,
+    qr_code: `SWASTHYA_FAMILY:${normalizedCode}`,
+    created_by: familyGroup.created_by,
+    created_at: familyGroup.created_at,
+    join_code: normalizedCode,
+  };
 
   return family;
 };
 
 export const getFamilyByPatientId = async (patientId: string): Promise<FamilyRecord | null> => {
-  const patient = await getPatientById(patientId);
-  if (!patient?.family_id) return null;
-  const str = await AsyncStorage.getItem(`${FAMILY_PREFIX}${patient.family_id}`);
-  return str ? JSON.parse(str) : null;
+  // Query family_members to find family ID for patient
+  const { data: memberData, error: memberError } = await supabase
+    .from('family_members')
+    .select('family_id, family_groups (*)')
+    .eq('patient_id', patientId)
+    .maybeSingle();
+
+  if (memberError || !memberData || !memberData.family_groups) return null;
+
+  const fg = memberData.family_groups as any;
+
+  return {
+    id: fg.id,
+    family_name: fg.family_name,
+    qr_code: `SWASTHYA_FAMILY:${fg.family_code}`,
+    created_by: fg.created_by,
+    created_at: fg.created_at,
+    join_code: fg.family_code,
+  };
 };
 
 export const getFamilyMembers = async (familyId: string) => {
-  const str = await AsyncStorage.getItem(`${FAMILY_MEMBERS_PREFIX}${familyId}`);
-  if (!str) return [];
-  return JSON.parse(str);
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('id, family_id, patient_id, role, patients (*)')
+    .eq('family_id', familyId);
+
+  if (error || !data) return [];
+
+  return data.map((m: any) => ({
+    id: m.id,
+    family_id: m.family_id,
+    patient_id: m.patient_id,
+    role: m.role,
+    patient: m.patients ? {
+      id: m.patients.id,
+      name: m.patients.full_name,
+      email: m.patients.email,
+      age: m.patients.age,
+      gender: m.patients.gender,
+      phone: m.patients.phone_number,
+      family_id: familyId,
+      created_at: m.patients.created_at,
+    } : null,
+  }));
 };
 
-// Legacy OTP stubs (kept to avoid import errors from otp.tsx)
+// Legacy OTP stubs
 export const generateRandomOTP = (): string => '123456';
 export const storeOTPLocally = async (_phone: string, _otp: string): Promise<void> => {};
 export const getStoredOTP = async (_phone: string): Promise<string | null> => '123456';
 export const clearStoredOTP = async (): Promise<void> => {};
 export const getRedirectUrl = (): string => '';
-export const signInWithGoogle = async (email?: string, name?: string) => ({
-  user: { id: emailToId(email ?? 'user@example.com'), email: email ?? 'user@example.com', name: name ?? 'User' },
-});
+
+// Supabase Google Auth Flow
+export const signInWithGoogle = async (email?: string, name?: string) => {
+  try {
+    const redirectUrl = Linking.createURL('/(auth)/login');
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+        skipBrowserRedirect: false,
+      },
+    });
+
+    if (error) throw error;
+    if (!data?.url) throw new Error('No OAuth URL returned');
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+
+    if (result.type === 'success' && result.url) {
+      const parsedUrl = Linking.parse(result.url);
+      const { access_token, refresh_token } = parsedUrl.queryParams || {};
+
+      if (access_token && refresh_token) {
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: access_token as string,
+          refresh_token: refresh_token as string,
+        });
+
+        if (sessionError) throw sessionError;
+
+        if (sessionData.user) {
+          // Check if patient details already exist in patients table
+          const existing = await getPatientById(sessionData.user.id);
+          if (!existing) {
+            const fullName = sessionData.user.user_metadata?.full_name || sessionData.user.user_metadata?.name || name || 'User';
+            await supabase.from('patients').insert({
+              id: sessionData.user.id,
+              full_name: fullName,
+              email: sessionData.user.email,
+              created_at: new Date().toISOString(),
+            });
+          }
+
+          return {
+            user: {
+              id: sessionData.user.id,
+              email: sessionData.user.email,
+              name: sessionData.user.user_metadata?.full_name || 'User',
+            }
+          };
+        }
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error('Google Sign In error:', err);
+    throw err;
+  }
+};

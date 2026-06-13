@@ -22,12 +22,17 @@ export default function ConfirmScreen() {
 
   const fetchProfile = async () => {
     const { data, error } = await supabase
-      .from('users')
+      .from('patients')
       .select('*')
       .eq('id', user?.id)
       .single();
     
-    if (data) setProfile(data);
+    if (data) {
+      setProfile({
+        ...data,
+        name: data.full_name,
+      });
+    }
   };
 
   const getProfileData = () => [

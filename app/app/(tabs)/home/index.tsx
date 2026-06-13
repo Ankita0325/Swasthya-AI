@@ -531,14 +531,19 @@ export default function HomeScreen() {
       if (!resolvedId) return;
 
       const { data, error } = await supabase
-        .from('users')
+        .from('patients')
         .select('*')
         .eq('id', resolvedId)
         .single();
 
       if (error) throw error;
-      setProfile(data);
-      console.log('✅ Profile name loaded:', data?.name);
+      
+      const mappedProfile = {
+        ...data,
+        name: data?.full_name,
+      };
+      setProfile(mappedProfile);
+      console.log('✅ Profile name loaded:', mappedProfile.name);
     } catch (error) {
       console.error('Error fetching profile:', error);
       // Set default profile using email if available

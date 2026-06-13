@@ -207,7 +207,7 @@ export default function ProfileScreen() {
     try {
       // 1. Fetch user profile from Supabase
       const { data, error } = await supabase
-        .from('users')
+        .from('patients')
         .select('*')
         .eq('id', resolvedId)
         .single();
@@ -227,6 +227,12 @@ export default function ProfileScreen() {
           allergies: [],
           state: 'Not set',
           adherence_rate: 100,
+        };
+      } else {
+        currentProfile = {
+          ...data,
+          name: data.full_name,
+          phone: data.phone_number,
         };
       }
       setProfile(currentProfile);
@@ -251,10 +257,31 @@ export default function ProfileScreen() {
         }
       }
 
-      // 3. Load Medical Information from AsyncStorage
-      const storedMedical = await AsyncStorage.getItem(`medical_info_${resolvedId}`);
-      if (storedMedical) {
-        setMedicalInfo(JSON.parse(storedMedical));
+      // 3. Load Medical Information from Supabase
+      const { data: medicalDbData, error: medicalError } = await supabase
+        .from('medical_information')
+        .select('*')
+        .eq('patient_id', resolvedId)
+        .maybeSingle();
+
+      if (medicalDbData) {
+        const mappedMed = {
+          age: currentProfile.age?.toString() || '30',
+          gender: currentProfile.gender || 'Male',
+          weight: medicalDbData.weight || '72',
+          height: medicalDbData.height || '175',
+          bloodType: medicalDbData.blood_type || 'O+',
+          allergies: medicalDbData.allergies || '',
+          bloodPressure: medicalDbData.blood_pressure || '120/80',
+          heartRate: medicalDbData.heart_rate || '72',
+          oxygenLevel: medicalDbData.oxygen_level || '98',
+          surgeries: medicalDbData.surgeries || 'None',
+          chronicConditions: medicalDbData.chronic_conditions || 'None',
+          vaccinations: medicalDbData.vaccinations || 'Covid-19, Hep B',
+          familyGenetics: medicalDbData.family_genetics || 'None',
+        };
+        setMedicalInfo(mappedMed);
+        await AsyncStorage.setItem(`medical_info_${resolvedId}`, JSON.stringify(mappedMed));
       } else {
         const initialMed = {
           age: currentProfile.age?.toString() || '30',
@@ -273,6 +300,24 @@ export default function ProfileScreen() {
         };
         setMedicalInfo(initialMed);
         await AsyncStorage.setItem(`medical_info_${resolvedId}`, JSON.stringify(initialMed));
+        
+        // Save initial medical info to DB
+        await supabase
+          .from('medical_information')
+          .insert({
+            patient_id: resolvedId,
+            weight: initialMed.weight,
+            height: initialMed.height,
+            blood_type: initialMed.bloodType,
+            allergies: initialMed.allergies,
+            blood_pressure: initialMed.bloodPressure,
+            heart_rate: initialMed.heartRate,
+            oxygen_level: initialMed.oxygenLevel,
+            surgeries: initialMed.surgeries,
+            chronic_conditions: initialMed.chronicConditions,
+            vaccinations: initialMed.vaccinations,
+            family_genetics: initialMed.familyGenetics,
+          });
       }
 
       // 4. Load Emergency Contacts from AsyncStorage
@@ -361,26 +406,51 @@ export default function ProfileScreen() {
       setMedicalInfo(newInfo);
       await AsyncStorage.setItem(`medical_info_${resolvedId}`, JSON.stringify(newInfo));
 
-      // Attempt to sync age & gender with Supabase 'users' table
+      // 1. Sync age & gender with patients table
       const ageNum = parseInt(newInfo.age);
-      const { error } = await supabase
-        .from('users')
+      const { error: patientErr } = await supabase
+        .from('patients')
         .update({
           age: isNaN(ageNum) ? null : ageNum,
           gender: newInfo.gender,
         })
         .eq('id', resolvedId);
 
-      if (error) {
-        console.warn('Supabase profile sync error:', error);
-      } else {
-        // Update local profile state
-        setProfile((prev: any) => ({
-          ...prev,
-          age: isNaN(ageNum) ? prev?.age : ageNum,
-          gender: newInfo.gender,
-        }));
+      if (patientErr) {
+        console.warn('Supabase patient profile sync error:', patientErr);
       }
+
+      // 2. Save complete medical details to medical_information table
+      const { error: medErr } = await supabase
+        .from('medical_information')
+        .upsert({
+          patient_id: resolvedId,
+          weight: newInfo.weight,
+          height: newInfo.height,
+          blood_type: newInfo.bloodType,
+          allergies: newInfo.allergies,
+          blood_pressure: newInfo.bloodPressure,
+          heart_rate: newInfo.heartRate,
+          oxygen_level: newInfo.oxygenLevel,
+          surgeries: newInfo.surgeries,
+          chronic_conditions: newInfo.chronicConditions,
+          vaccinations: newInfo.vaccinations,
+          family_genetics: newInfo.familyGenetics,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (medErr) {
+        console.error('Supabase medical info save error:', medErr);
+        throw medErr;
+      }
+
+      // Update local profile state
+      setProfile((prev: any) => ({
+        ...prev,
+        age: isNaN(ageNum) ? prev?.age : ageNum,
+        gender: newInfo.gender,
+      }));
+
       showCustomAlert('Success', 'Medical information saved successfully', 'success');
     } catch (err) {
       console.error('Failed to save medical info:', err);

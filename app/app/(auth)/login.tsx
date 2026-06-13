@@ -19,7 +19,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuthStore } from '@/store/auth.store';
-import { signUp } from '@/services/auth.service';
+import { signUp, signIn, signInWithGoogle } from '@/services/auth.service';
 
 const { width, height } = Dimensions.get('window');
 
@@ -263,20 +263,30 @@ export default function LoginScreen() {
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
-  const handleSignIn = () => {
-    // Validate inputs before signing in
+  const handleSignIn = async () => {
     if (!validateSignIn()) return;
-    
-    setSessionState({
-      userId: 'guest',
-      patientId: 'guest',
-      phoneNumber: null,
-      isLoggedIn: true,
-      hasProfile: true,
-      hasFamilyGroup: true,
-      onboardingComplete: true,
-    });
-    router.replace('/(tabs)/home');
+    setLoading(true);
+    try {
+      const result = await signIn(siEmail.trim(), siPassword);
+      if (result.success && result.user) {
+        const user = result.user;
+        setSessionState({
+          userId: user.id,
+          patientId: user.id,
+          phoneNumber: user.phone,
+          isLoggedIn: true,
+          hasProfile: Boolean(user.age && user.gender),
+          hasFamilyGroup: Boolean(user.family_id),
+        });
+        router.replace('/');
+      } else {
+        Alert.alert('Sign In Failed', result.error ?? 'Invalid email or password');
+      }
+    } catch (e: any) {
+      Alert.alert('Sign In Failed', e?.message ?? 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignUp = async () => {
@@ -293,7 +303,7 @@ export default function LoginScreen() {
         hasFamilyGroup: false,
         onboardingComplete: false,
       });
-      // index.tsx will redirect to user-details since hasProfile=false
+      router.replace('/');
     } catch (e: any) {
       Alert.alert('Sign Up Failed', e?.message ?? 'Something went wrong');
     } finally {
@@ -301,18 +311,28 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogle = () => {
-    // TODO: add real Google OAuth — teammate will implement
-    setSessionState({
-      userId: 'guest',
-      patientId: 'guest',
-      phoneNumber: null,
-      isLoggedIn: true,
-      hasProfile: true,
-      hasFamilyGroup: true,
-      onboardingComplete: true,
-    });
-    router.replace('/(tabs)/home');
+  const handleGoogle = async () => {
+    setLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      if (result && result.user) {
+        const { getPatientById } = require('@/services/auth.service');
+        const dbPatient = await getPatientById(result.user.id);
+        setSessionState({
+          userId: result.user.id,
+          patientId: result.user.id,
+          phoneNumber: dbPatient?.phone ?? null,
+          isLoggedIn: true,
+          hasProfile: Boolean(dbPatient?.age && dbPatient?.gender),
+          hasFamilyGroup: Boolean(dbPatient?.family_id),
+        });
+        router.replace('/');
+      }
+    } catch (e: any) {
+      Alert.alert('Google Auth Failed', e?.message ?? 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -354,6 +374,9 @@ export default function LoginScreen() {
               </View>
               <Text style={s.brandName}>Swasthya AI</Text>
               <Text style={s.brandTagline}>Your intelligent health companion</Text>
+              <View style={s.stepBadge}>
+                <Text style={s.stepBadgeText}>Step 1 of 3: Account Setup</Text>
+              </View>
             </View>
 
             {/* ── Tab switcher ───────────────────────────────────────────── */}
@@ -735,6 +758,20 @@ const s = StyleSheet.create({
   switchLink: {
     fontFamily: FONT.semibold,
     fontSize: 13,
+    color: C.primary,
+  },
+  stepBadge: {
+    backgroundColor: '#E8F2FF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#DCEAFF',
+  },
+  stepBadgeText: {
+    fontFamily: FONT.semibold,
+    fontSize: 12,
     color: C.primary,
   },
 });

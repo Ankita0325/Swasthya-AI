@@ -49,11 +49,11 @@ export default function ChatScreen() {
 
   const fetchUserName = async () => {
     const { data } = await supabase
-      .from('users')
-      .select('name')
+      .from('patients')
+      .select('full_name')
       .eq('id', user?.id)
       .single();
-    if (data?.name) setUserName(data.name);
+    if (data?.full_name) setUserName(data.full_name);
   };
 
   const getUserInitials = () => {

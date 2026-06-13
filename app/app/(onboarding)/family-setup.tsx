@@ -309,7 +309,7 @@ export default function FamilySetupScreen() {
 
             {/* Step Indicator */}
             <View style={styles.stepContainer}>
-              <Text style={styles.stepText}>Step 2 of 2</Text>
+              <Text style={styles.stepText}>Step 3 of 3</Text>
               <View style={styles.progressBar}>
                 <View style={styles.progressFill} />
               </View>

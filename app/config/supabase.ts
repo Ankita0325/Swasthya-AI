@@ -83,22 +83,18 @@ const createMockSupabase = () => {
     };
 };
 
-export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://mmdhzvbjbnamepfiryra.supabase.co';
+export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tZGh6dmJqYm5hbWVwZmlyeXJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzMDc5NjYsImV4cCI6MjA5Njg4Mzk2Nn0.eGrsAyADnIp951edaSe6gHw2TdxfaFljw19vKoXmWW4';
 
-const isRealConfigured = process.env.EXPO_PUBLIC_SUPABASE_URL && 
-                         process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY && 
-                         !process.env.EXPO_PUBLIC_SUPABASE_URL.includes('placeholder');
+const isRealConfigured = true;
 
-export const supabase = isRealConfigured
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        storage: AsyncStorage,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    })
-  : (createMockSupabase() as any);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
 
 export default supabase;
