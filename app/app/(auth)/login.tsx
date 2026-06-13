@@ -61,7 +61,7 @@ interface InputFieldProps {
   returnKeyType?: 'next' | 'done';
   onSubmitEditing?: () => void;
   error?: string;
-  inputRef?: React.RefObject<TextInput>;
+  inputRef?: React.RefObject<TextInput | null>;
 }
 
 function InputField({
@@ -185,10 +185,10 @@ export default function LoginScreen() {
   }>({});
 
   // Refs for focus-chaining
-  const siPasswordRef = useRef<TextInput>(null);
-  const suEmailRef = useRef<TextInput>(null);
-  const suPasswordRef = useRef<TextInput>(null);
-  const suConfirmRef = useRef<TextInput>(null);
+  const siPasswordRef = useRef<TextInput | null>(null);
+  const suEmailRef = useRef<TextInput | null>(null);
+  const suPasswordRef = useRef<TextInput | null>(null);
+  const suConfirmRef = useRef<TextInput | null>(null);
 
   // ── Animations ──────────────────────────────────────────────────────────────
   const fadeAnim = useRef(new Animated.Value(0)).current;
