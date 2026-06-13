@@ -4,7 +4,7 @@ on:
   issues:
     types: [opened]
   pull_request:
-    types: [opened]
+    types: [opened, closed]
 
 permissions:
   issues: write
@@ -23,15 +23,7 @@ jobs:
             
             if (context.payload.issue) {
               const issueNum = context.payload.issue.number;
-              console.log(`Assigning issue #${issueNum} to ${username}`);
-              
-              // Assign issue
-              await github.rest.issues.addAssignees({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNum,
-                assignees: [username]
-              });
+              console.log(`Processing issue #${issueNum}`);
               
               // Auto-label based on keywords
               const title = context.payload.issue.title.toLowerCase();
@@ -53,61 +45,104 @@ jobs:
               }
             } else if (context.payload.pull_request) {
               const prNum = context.payload.pull_request.number;
-              console.log(`Assigning PR #${prNum} to ${username}`);
               
-              // Assign PR
-              await github.rest.issues.addAssignees({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNum,
-                assignees: [username]
-              });
-              
-              // Request review from indresh404 only if indresh404 is NOT the PR author
-              const prAuthor = context.payload.pull_request.user.login;
-              if (prAuthor !== username) {
-                console.log(`Requesting review from ${username} for PR #${prNum}`);
+              if (context.payload.action === 'opened') {
+                console.log(`Processing opened PR #${prNum}`);
+                
+                // Request review from indresh404 only if indresh404 is NOT the PR author
+                const prAuthor = context.payload.pull_request.user.login;
+                if (prAuthor !== username) {
+                  console.log(`Requesting review from ${username} for PR #${prNum}`);
+                  try {
+                    await github.rest.pulls.requestReviewers({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      pull_number: prNum,
+                      reviewers: [username]
+                    });
+                  } catch (err) {
+                    console.error(`Failed to request review: ${err.message}`);
+                  }
+                } else {
+                  console.log(`PR author is ${username}, skipping review request to self.`);
+                }
+
+                // Auto-label PR based on changed files
                 try {
-                  await github.rest.pulls.requestReviewers({
+                  const files = await github.rest.pulls.listFiles({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    pull_number: prNum,
-                    reviewers: [username]
+                    pull_number: prNum
                   });
+                  
+                  const filenames = files.data.map(f => f.filename);
+                  const labels = [];
+                  
+                  if (filenames.some(f => f.startsWith('app/'))) labels.push('frontend');
+                  if (filenames.some(f => f.startsWith('backend/'))) labels.push('backend');
+                  if (filenames.some(f => f.includes('db/') || f.includes('database') || f.includes('supabase') || f.includes('schema'))) labels.push('database');
+                  if (filenames.some(f => f.startsWith('.github/') || f.includes('Dockerfile') || f.includes('docker-compose') || f.includes('eas.json'))) labels.push('devops');
+                  if (filenames.some(f => f.endsWith('.md') || f.startsWith('docs/'))) labels.push('docs');
+
+                  if (labels.length > 0) {
+                    console.log(`Adding labels to PR #${prNum}: ${labels}`);
+                    await github.rest.issues.addLabels({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: prNum,
+                      labels: labels
+                    });
+                  }
                 } catch (err) {
-                  console.error(`Failed to request review: ${err.message}`);
+                  console.error(`Failed to auto-label PR: ${err.message}`);
                 }
-              } else {
-                console.log(`PR author is ${username}, skipping review request to self.`);
-              }
-
-              // Auto-label PR based on changed files
-              try {
-                const files = await github.rest.pulls.listFiles({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: prNum
-                });
+              } else if (context.payload.action === 'closed' && context.payload.pull_request.merged) {
+                console.log(`PR #${prNum} merged! Scanning for associated issues to close automatically.`);
                 
-                const filenames = files.data.map(f => f.filename);
-                const labels = [];
+                const title = context.payload.pull_request.title || '';
+                const body = context.payload.pull_request.body || '';
+                const branchName = context.payload.pull_request.head.ref || '';
                 
-                if (filenames.some(f => f.startsWith('app/'))) labels.push('frontend');
-                if (filenames.some(f => f.startsWith('backend/'))) labels.push('backend');
-                if (filenames.some(f => f.includes('db/') || f.includes('database') || f.includes('supabase') || f.includes('schema'))) labels.push('database');
-                if (filenames.some(f => f.startsWith('.github/') || f.includes('Dockerfile') || f.includes('docker-compose') || f.includes('eas.json'))) labels.push('devops');
-                if (filenames.some(f => f.endsWith('.md') || f.startsWith('docs/'))) labels.push('docs');
-
-                if (labels.length > 0) {
-                  console.log(`Adding labels to PR #${prNum}: ${labels}`);
-                  await github.rest.issues.addLabels({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: prNum,
-                    labels: labels
-                  });
+                const issueNumbers = new Set();
+                
+                // Pattern 1: #123
+                const hashPattern = /#(\d+)/g;
+                let match;
+                while ((match = hashPattern.exec(title + ' ' + body)) !== null) {
+                  issueNumbers.add(parseInt(match[1], 10));
                 }
-              } catch (err) {
-                console.error(`Failed to auto-label PR: ${err.message}`);
+                
+                // Pattern 2: issue-123 / fix-123
+                const textPattern = /\b(?:issue|close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved|bug)[/-_-]?(\d+)\b/gi;
+                while ((match = textPattern.exec(title + ' ' + body + ' ' + branchName)) !== null) {
+                  issueNumbers.add(parseInt(match[1], 10));
+                }
+                
+                if (issueNumbers.size > 0) {
+                  console.log(`Found referenced issues: ${Array.from(issueNumbers).join(', ')}`);
+                  for (const issueNum of issueNumbers) {
+                    try {
+                      console.log(`Closing issue #${issueNum} automatically...`);
+                      await github.rest.issues.update({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: issueNum,
+                        state: 'closed',
+                        state_reason: 'completed'
+                      });
+                      
+                      await github.rest.issues.createComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: issueNum,
+                        body: `Closed automatically because Pull Request #${prNum} was merged.`
+                      });
+                    } catch (err) {
+                      console.error(`Failed to close issue #${issueNum}: ${err.message}`);
+                    }
+                  }
+                } else {
+                  console.log('No associated issues found to close.');
+                }
               }
             }
