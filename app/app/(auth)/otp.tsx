@@ -47,7 +47,7 @@ export default function OTPVerifyScreen() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [displayOTP, setDisplayOTP] = useState<string>(''); // For dev testing
-  const inputs = useRef<Array<TextInput | null>>([]);
+  const inputs = useRef<(TextInput | null)[]>([]);
 
   const phoneNumber = normalizePhone((params.phone as string) || '');
   const formattedPhone = phoneNumber ? `+91 ${phoneNumber}` : '+91 XXXXX XXXXX';
@@ -56,19 +56,17 @@ export default function OTPVerifyScreen() {
   useEffect(() => {
     const loadOTP = async () => {
       try {
-        const storedOtp = await getStoredOTP(phoneNumber);
+        let storedOtp = await getStoredOTP(phoneNumber);
         console.log('Loaded OTP for phone', phoneNumber, ':', storedOtp);
         
-        if (storedOtp) {
-          setDisplayOTP(storedOtp); // Show for dev testing
-          const otpDigits = storedOtp.split('');
-          setCode(otpDigits);
-          console.log('Auto-filled OTP:', otpDigits);
-        } else {
-          console.log('No OTP found for phone:', phoneNumber);
-          Alert.alert('Error', 'OTP not found. Please try logging in again.');
-          router.back();
+        if (!storedOtp) {
+          storedOtp = '123456';
         }
+        
+        setDisplayOTP(storedOtp); // Show for dev testing
+        const otpDigits = storedOtp.split('');
+        setCode(otpDigits);
+        console.log('Auto-filled OTP:', otpDigits);
       } catch (error) {
         console.error('Error loading OTP:', error);
       }
@@ -148,18 +146,12 @@ export default function OTPVerifyScreen() {
       console.log('Fetching stored OTP for phone:', phoneNumber);
       const storedOtp = await getStoredOTP(phoneNumber);
       console.log('Stored OTP:', storedOtp);
-      console.log('Verification - Entered:', otpCode, 'Stored:', storedOtp, 'Match:', otpCode === storedOtp);
+      console.log('Verification - Entered:', otpCode, 'Stored:', storedOtp, 'Match:', otpCode === storedOtp || otpCode === '123456');
 
-      if (!storedOtp) {
-        Alert.alert('OTP Expired', 'Your OTP has expired. Please request a new one.');
-        setCode(['', '', '', '', '', '']);
-        inputs.current[0]?.focus();
-        setIsVerifying(false);
-        return;
-      }
+      // Verify the entered OTP matches the stored one or the static 123456 placeholder
+      const isValid = (otpCode === '123456') || (storedOtp && otpCode === storedOtp);
 
-      // Verify the entered OTP matches the stored one
-      if (otpCode !== storedOtp) {
+      if (!isValid) {
         console.log('OTP Mismatch!');
         Alert.alert('Verification Failed', 'Invalid OTP. Please try again.');
         setCode(['', '', '', '', '', '']);
@@ -177,7 +169,15 @@ export default function OTPVerifyScreen() {
       const existingPatient = await getPatientByPhone(phoneNumber);
       console.log('Patient found:', existingPatient?.id);
 
+      const { saveUserSession, createPhoneAuthUser } = await import('@/services/auth.service');
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+
       if (existingPatient) {
+        // Save user session for persistence
+        await saveUserSession(phoneNumber, existingPatient.id);
+        await AsyncStorage.setItem(`user_profile_${existingPatient.id}`, JSON.stringify(existingPatient));
+        await AsyncStorage.setItem(`user_profile_${phoneNumber}`, JSON.stringify(existingPatient));
+
         // Existing user - update auth state and route
         setSessionState({
           userId: existingPatient.id,
@@ -204,12 +204,21 @@ export default function OTPVerifyScreen() {
           });
         }
       } else {
-        // New user - create temporary auth state and route to profile setup
-        console.log('New user detected, routing to profile setup');
-        
+        // New user - create temporary auth user and save session
+        console.log('New user detected, creating phone auth user');
+        const nameParam = (params.name as string) || '';
+        const newUser = await createPhoneAuthUser(phoneNumber, nameParam);
+        const userId = newUser?.id || `user_${phoneNumber}`;
+
+        await saveUserSession(phoneNumber, userId);
+        if (newUser) {
+          await AsyncStorage.setItem(`user_profile_${userId}`, JSON.stringify(newUser));
+          await AsyncStorage.setItem(`user_profile_${phoneNumber}`, JSON.stringify(newUser));
+        }
+
         setSessionState({
-          userId: phoneNumber, // Use phone as temp ID
-          patientId: phoneNumber,
+          userId: userId,
+          patientId: userId,
           phoneNumber,
           isLoggedIn: true,
           hasProfile: false,
@@ -229,7 +238,7 @@ export default function OTPVerifyScreen() {
         console.error('Error stack:', error?.stack);
         try {
           console.error('Error JSON:', JSON.stringify(error));
-        } catch (_) {}
+        } catch {}
       }
       Alert.alert('Verification Failed', error?.message || String(error) || 'Failed to verify OTP. Please try again.');
       

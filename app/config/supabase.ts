@@ -1,5 +1,7 @@
 // config/supabase.ts
 import { Platform } from 'react-native';
+import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const createMockSupabase = () => {
     const makePromise = (data: any, error: any = null) => {
@@ -28,6 +30,9 @@ const createMockSupabase = () => {
         auth: {
             getSession: () => Promise.resolve({ data: { session: null }, error: null }),
             signInAnonymously: () => Promise.resolve({ data: { session: null }, error: null }),
+            signInWithOAuth: (options: any) => Promise.resolve({ data: { url: 'https://placeholder.supabase.co/auth/v1/authorize' }, error: null }),
+            setSession: (session: any) => Promise.resolve({ data: { session: { user: { id: 'mock-google-user', email: 'user@example.com' } } }, error: null }),
+            signOut: () => Promise.resolve({ error: null }),
             onAuthStateChange: (callback: any) => {
                 // Return a mock unsubscriber subscription
                 return { data: { subscription: { unsubscribe: () => {} } } };
@@ -78,8 +83,22 @@ const createMockSupabase = () => {
     };
 };
 
-export const SUPABASE_URL = 'https://placeholder.supabase.co';
-export const SUPABASE_ANON_KEY = 'placeholder-anon-key';
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
-export const supabase = createMockSupabase() as any;
+const isRealConfigured = process.env.EXPO_PUBLIC_SUPABASE_URL && 
+                         process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY && 
+                         !process.env.EXPO_PUBLIC_SUPABASE_URL.includes('placeholder');
+
+export const supabase = isRealConfigured
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        storage: AsyncStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    })
+  : (createMockSupabase() as any);
+
 export default supabase;

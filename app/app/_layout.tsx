@@ -1,7 +1,5 @@
 // app/_layout.tsx
-import {
-  Delius_400Regular,
-} from '@expo-google-fonts/delius';
+import { Delius_400Regular } from '@expo-google-fonts/delius';
 import {
   Poppins_300Light,
   Poppins_400Regular,
@@ -17,7 +15,6 @@ import 'react-native-reanimated';
 
 import { Loader } from '@/components/ui/Loader';
 import { getCurrentPatient, getCurrentSession } from '@/services/auth.service';
-import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/store/auth.store';
 
 export default function RootLayout() {
@@ -41,7 +38,7 @@ export default function RootLayout() {
         const session = await getCurrentSession();
         if (!mounted) return;
 
-        if (!session || session.user.is_anonymous) {
+        if (!session) {
           logout();
           return;
         }
@@ -51,48 +48,20 @@ export default function RootLayout() {
 
         setSessionState({
           userId: session.user.id,
-          patientId: patient?.id ?? (session.user.user_metadata?.patient_id as string | null) ?? null,
-          phoneNumber: (patient?.phone ?? session.user.user_metadata?.phone ?? null) as string | null,
+          patientId: patient?.id ?? session.user.id,
+          phoneNumber: patient?.phone ?? null,
           isLoggedIn: true,
-          hasProfile: Boolean(patient),
+          hasProfile: Boolean(patient?.age && patient?.gender),
           hasFamilyGroup: Boolean(patient?.family_id),
         });
       } catch {
-        if (mounted) {
-          logout();
-        }
+        if (mounted) logout();
       }
     };
 
     hydrateAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      if (!mounted) return;
-
-      if (!session) {
-        logout();
-        return;
-      }
-
-      if (session.user.is_anonymous) {
-        logout();
-        return;
-      }
-
-      setSessionState({
-        userId: session.user.id,
-        isLoggedIn: true,
-      });
-
-      void hydrateAuth();
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => { mounted = false; };
   }, [logout, setSessionState]);
 
   if (!loaded) return <Loader text="Loading Swasthya AI..." />;
