@@ -87,7 +87,7 @@ Authorization: Bearer <your-supabase-jwt-token>
   {
     "id": "be5b5671-3112-436c-acdf-0eb7cb6e5efe",
     "email": "user@example.com",
-    "full_name": "Rahul Kumar",
+    "full_name": "Indresh Suresh",
     "phone": "9912345678"
   }
   ```
@@ -97,7 +97,7 @@ Authorization: Bearer <your-supabase-jwt-token>
 - **Payload**:
   ```json
   {
-    "full_name": "Rahul Kumar",
+    "full_name": "Indresh Suresh",
     "phone": "9912345678",
     "age": 24,
     "gender": "Male"

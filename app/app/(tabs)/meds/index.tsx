@@ -19,7 +19,7 @@ import { Linking } from 'react-native';
 import JanAushadhiMap from '@/components/JanAushadhiMap';
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-const ADHERENCE_DATA = [true, true, false, true, true, true, false]; // last 7 days fake
+const ADHERENCE_DATA = [true, true, false, true, true, true, false];
 
 const FAKE_ANALYSIS = [
   { medicine: 'Metformin 500mg', status: 'safe', note: 'No known interactions with your current medications.', color: '#10B981', icon: 'checkmark-circle' },
@@ -27,58 +27,15 @@ const FAKE_ANALYSIS = [
   { medicine: 'Vitamin D3', status: 'safe', note: 'OpenFDA: No adverse interactions detected.', color: '#10B981', icon: 'checkmark-circle' },
 ];
 
-const TopNavBar = ({ onScanPress, onNotificationPress, onProfilePress, notificationCount = 3, userName = 'Rahul', activeScreen = 'meds' }: any) => {
-  const getTitle = () => {
-    switch (activeScreen) {
-      case 'home': return 'DASHBOARD';
-      case 'checkin': return 'CHECK-IN';
-      case 'meds': return 'MEDICATIONS';
-      case 'profile': return 'PROFILE';
-      default: return 'MEDICATIONS';
-    }
-  };
-  return (
-    <View style={styles.topNavContainer}>
-      <View style={styles.topNavBar}>
-        <TouchableOpacity activeOpacity={0.8} onPress={onScanPress} style={styles.leftButton}>
-          <LinearGradient colors={['#0474FC', '#0360D0']} style={styles.gradientButton}>
-            <Ionicons name="scan-outline" size={22} color="#FFFFFF" />
-          </LinearGradient>
-        </TouchableOpacity>
-        <View style={styles.centerPill}>
-          <View style={styles.pillContent}>
-            <View style={styles.blueDot} />
-            <Text style={styles.pillText}>{getTitle()}</Text>
-          </View>
-        </View>
-        <View style={styles.rightSection}>
-          <TouchableOpacity activeOpacity={0.8} onPress={onNotificationPress} style={styles.iconButton}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="notifications-outline" size={22} color="#374151" />
-              {notificationCount > 0 && (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.badgeText}>{notificationCount > 9 ? '9+' : notificationCount}</Text>
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={onProfilePress} style={styles.avatarButton}>
-            <LinearGradient colors={['#0474FC', '#0360D0']} style={styles.avatarGradient}>
-              <Text style={styles.avatarText}>{userName[0]}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
-};
-
-// Mini calendar strip for the week
+// Week Calendar Component
 const WeekCalendar = () => {
   const today = new Date().getDay();
   return (
     <View style={styles.calendarCard}>
-      <Text style={styles.cardTitle}>📅 This Week&apos;s Adherence</Text>
+      <View style={styles.calendarHeader}>
+        <Ionicons name="calendar-outline" size={18} color="#0474FC" />
+        <Text style={styles.cardTitle}>This Week's Adherence</Text>
+      </View>
       <View style={styles.weekRow}>
         {DAYS.map((day, i) => (
           <View key={i} style={styles.dayCol}>
@@ -109,7 +66,7 @@ const WeekCalendar = () => {
   );
 };
 
-// Adherence analytics bar chart
+// Analytics Card
 const AnalyticsCard = () => {
   const weeks = [
     { label: 'W1', pct: 71 },
@@ -119,24 +76,29 @@ const AnalyticsCard = () => {
   ];
   return (
     <View style={styles.analyticsCard}>
-      <Text style={styles.cardTitle}>📊 Monthly Adherence</Text>
+      <View style={styles.calendarHeader}>
+        <Ionicons name="stats-chart-outline" size={18} color="#8B5CF6" />
+        <Text style={styles.cardTitle}>Monthly Adherence</Text>
+      </View>
       <View style={styles.barsRow}>
         {weeks.map((w, i) => (
           <View key={i} style={styles.barCol}>
             <Text style={styles.barPct}>{w.pct}%</Text>
             <View style={styles.barBg}>
-              <View style={[styles.barFill, { height: `${w.pct}%` as any, backgroundColor: w.pct >= 80 ? '#10B981' : w.pct >= 60 ? '#F59E0B' : '#EF4444' }]} />
+              <View style={[styles.barFill, { height: `${w.pct}%`, backgroundColor: w.pct >= 80 ? '#10B981' : w.pct >= 60 ? '#F59E0B' : '#EF4444' }]} />
             </View>
             <Text style={styles.barLabel}>{w.label}</Text>
           </View>
         ))}
       </View>
-      <Text style={styles.analyticsNote}>Overall adherence: <Text style={{ color: '#10B981', fontWeight: '700' }}>78.5%</Text> — Keep going!</Text>
+      <Text style={styles.analyticsNote}>
+        Overall adherence: <Text style={{ color: '#10B981', fontWeight: '700' }}>78.5%</Text> — Keep going!
+      </Text>
     </View>
   );
 };
 
-// AI OpenFDA Analysis Panel
+// AI Analysis Panel
 const AIAnalysisPanel = ({ visible, onClose, medName }: { visible: boolean; onClose: () => void; medName: string }) => {
   const [analysing, setAnalysing] = useState(true);
   const [result, setResult] = useState<any>(null);
@@ -189,8 +151,10 @@ const AIAnalysisPanel = ({ visible, onClose, medName }: { visible: boolean; onCl
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
-            <Ionicons name="flask-outline" size={22} color="#0474FC" />
-            <Text style={styles.modalTitle}>AI Drug Analysis</Text>
+            <View style={styles.modalHeaderLeft}>
+              <Ionicons name="flask-outline" size={22} color="#0474FC" />
+              <Text style={styles.modalTitle}>AI Drug Analysis</Text>
+            </View>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
@@ -235,7 +199,6 @@ export default function MedsScreen() {
   const [newMedName, setNewMedName] = useState('');
   const [genericAlts, setGenericAlts] = useState<any[]>([]);
 
-  // Mapping State
   const [userLocation, setUserLocation] = useState<{ lat: number, lon: number } | null>(null);
   const [nearbyStores, setNearbyStores] = useState<any[]>([]);
   const [isMapVisible, setIsMapVisible] = useState(false);
@@ -356,12 +319,10 @@ export default function MedsScreen() {
           </head>
           <body>
             <div class="header">
-              <div class="title">SWASTHYA AI &mdash; JAN AUSHADHI READY PRESCRIPTION</div>
-              <div class="subtitle">Patient: Rahul | Date: ${new Date().toLocaleDateString('en-GB')}</div>
+              <div class="title">SWASTHYA AI — JAN AUSHADHI READY PRESCRIPTION</div>
+              <div class="subtitle">Patient: Indresh | Date: ${new Date().toLocaleDateString('en-GB')}</div>
             </div>
-
-            <p style="font-weight: bold; color: #374151;">Your Doctor's Prescription &rarr; Jan Aushadhi Generic</p>
-
+            <p style="font-weight: bold; color: #374151;">Your Doctor's Prescription → Jan Aushadhi Generic</p>
             <table>
               <thead>
                 <tr>
@@ -396,14 +357,11 @@ export default function MedsScreen() {
                 `}
               </tbody>
             </table>
-
             <div class="summary-box">
               <p class="summary-text">Total monthly savings: &#8377;${savings > 0 ? savings : 1155}</p>
               <p class="store-info">Nearest Jan Aushadhi Kendra: Dadar West, 1.2 km</p>
             </div>
-
             <p style="font-weight: bold; color: #111827;">Show this to the Jan Aushadhi pharmacist.</p>
-
             <div class="footer">
               NOTE: This is not a medical prescription. Consult your doctor before switching any medication.
             </div>
@@ -451,149 +409,150 @@ export default function MedsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-      <TopNavBar
-        onScanPress={() => router.push({ pathname: '/(tabs)/home', params: { scan: 'true' } })}
-        onNotificationPress={() => { }}
-        onProfilePress={() => router.push('/(tabs)/profile')}
-        notificationCount={3}
-        userName="Rahul"
-        activeScreen={currentRoute}
-      />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      
       {loading ? <SkeletonMedsScreen /> : (
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            <View style={styles.headerRow}>
-              <View>
-                <Text style={styles.title}>Your Medications</Text>
-                <Text style={styles.subtitle}>Track your daily adherence</Text>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Header */}
+          <View style={styles.headerSection}>
+            <View>
+              <Text style={styles.title}>💊 Medications</Text>
+              <Text style={styles.subtitle}>Track your daily adherence</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.exportBtn} onPress={handleExportJanAushadhiPDF}>
+                <Ionicons name="download-outline" size={20} color="#0474FC" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addBtn} onPress={() => setAddModalVisible(true)}>
+                <Ionicons name="add" size={20} color="#FFFFFF" />
+                <Text style={styles.addBtnText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Calendar & Analytics */}
+          <WeekCalendar />
+          <AnalyticsCard />
+
+          {/* Today's Medications */}
+          <Text style={styles.sectionLabel}>Today's Medications</Text>
+          {medications.map((med, index) => (
+            <View key={med.id || index} style={styles.medCard}>
+              <View style={styles.medInfo}>
+                <View style={[styles.medIconBg, takenToday[med.medicine_name] && styles.medIconTaken]}>
+                  <Ionicons name="medical" size={22} color={takenToday[med.medicine_name] ? '#FFFFFF' : '#0474FC'} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.medName}>{med.medicine_name}</Text>
+                  <Text style={styles.medDetail}>Next dose: {med.next_dose || 'Morning'}</Text>
+                  {takenToday[med.medicine_name] && (
+                    <Text style={styles.takenText}>✓ Taken at {takenToday[med.medicine_name]}</Text>
+                  )}
+                </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={styles.exportBtn} onPress={handleExportJanAushadhiPDF}>
-                  <Ionicons name="download-outline" size={20} color="#0474FC" />
+              <View style={styles.medActions}>
+                <TouchableOpacity
+                  style={styles.analyseBtn}
+                  onPress={() => { setSelectedMed(med.medicine_name); setAnalysisModal(true); }}
+                >
+                  <Ionicons name="flask-outline" size={16} color="#8B5CF6" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.addBtn} onPress={() => setAddModalVisible(true)}>
-                  <Ionicons name="add" size={20} color="#FFFFFF" />
-                  <Text style={styles.addBtnText}>Add</Text>
+                <TouchableOpacity
+                  style={[styles.logButton, takenToday[med.medicine_name] && styles.logButtonTaken]}
+                  onPress={() => handleLogAdherence(med.medicine_name)}
+                >
+                  <Ionicons
+                    name={takenToday[med.medicine_name] ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                    size={28}
+                    color={takenToday[med.medicine_name] ? '#10B981' : '#0474FC'}
+                  />
                 </TouchableOpacity>
               </View>
             </View>
+          ))}
 
-            <WeekCalendar />
-            <AnalyticsCard />
-
-            <Text style={styles.sectionLabel}>Today&apos;s Medications</Text>
-            {medications.map((med, index) => (
-              <View key={med.id || index} style={styles.medCard}>
-                <View style={styles.medInfo}>
-                  <View style={[styles.medIconBg, takenToday[med.medicine_name] && styles.medIconTaken]}>
-                    <Ionicons name="medical" size={22} color={takenToday[med.medicine_name] ? '#FFFFFF' : '#0474FC'} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.medName}>{med.medicine_name}</Text>
-                    <Text style={styles.medDetail}>Next dose: {med.next_dose || 'Morning'}</Text>
-                    {takenToday[med.medicine_name] && (
-                      <Text style={styles.takenText}>✓ Taken at {takenToday[med.medicine_name]}</Text>
-                    )}
+          {/* Generic Alternatives */}
+          {genericAlts.length > 0 && (
+            <>
+              <Text style={[styles.sectionLabel, { marginTop: 24 }]}>💊 Affordable Alternatives</Text>
+              <View style={styles.affordabilityCard}>
+                <View style={styles.affordabilityHeader}>
+                  <Text style={styles.affordabilityTitle}>Pradhan Mantri Jan Aushadhi</Text>
+                  <View style={styles.savingsBadge}>
+                    <Text style={styles.savingsBadgeText}>Save up to 80%</Text>
                   </View>
                 </View>
-                <View style={styles.medActions}>
-                  <TouchableOpacity
-                    style={styles.analyseBtn}
-                    onPress={() => { setSelectedMed(med.medicine_name); setAnalysisModal(true); }}
-                  >
-                    <Ionicons name="flask-outline" size={16} color="#8B5CF6" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.logButton, takenToday[med.medicine_name] && styles.logButtonTaken]}
-                    onPress={() => handleLogAdherence(med.medicine_name)}
-                  >
-                    <Ionicons
-                      name={takenToday[med.medicine_name] ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                      size={28}
-                      color={takenToday[med.medicine_name] ? '#10B981' : '#0474FC'}
-                    />
-                  </TouchableOpacity>
+
+                <View style={styles.engineOutputBox}>
+                  <View style={styles.engineRow}>
+                    <Text style={styles.engineLabel}>Current monthly cost:</Text>
+                    <Text style={styles.engineValueRed}>₹{(genericAlts.reduce((sum, item) => sum + item.market_price, 0) || 1840).toLocaleString('en-IN')}</Text>
+                  </View>
+                  <View style={styles.engineRow}>
+                    <Text style={styles.engineLabel}>Jan Aushadhi cost:</Text>
+                    <Text style={styles.engineValueGreen}>₹{(genericAlts.reduce((sum, item) => sum + item.jan_aushadhi_price, 0) || 210).toLocaleString('en-IN')}</Text>
+                  </View>
+                  <View style={styles.engineRow}>
+                    <Text style={styles.engineLabel}>Monthly savings:</Text>
+                    <Text style={styles.engineValueGreenSave}>₹{((genericAlts.reduce((sum, item) => sum + item.market_price, 0) || 1840) - (genericAlts.reduce((sum, item) => sum + item.jan_aushadhi_price, 0) || 210)).toLocaleString('en-IN')}</Text>
+                  </View>
+                  <View style={styles.engineRow}>
+                    <Text style={styles.engineLabel}>Annual savings:</Text>
+                    <Text style={styles.engineValueGreenSave}>₹{(((genericAlts.reduce((sum, item) => sum + item.market_price, 0) || 1840) - (genericAlts.reduce((sum, item) => sum + item.jan_aushadhi_price, 0) || 210)) * 12).toLocaleString('en-IN')}</Text>
+                  </View>
+                  <View style={styles.engineDivider} />
+                  <View style={styles.engineRow}>
+                    <Text style={styles.engineLabel}>Eligible scheme:</Text>
+                    <Text style={styles.engineValueBlue}>PM-JAY (₹5L cov)</Text>
+                  </View>
+                  <View style={styles.engineRow}>
+                    <Text style={styles.engineLabel}>Nearest store:</Text>
+                    <Text style={styles.engineValueDark}>Jan Aushadhi, Dadar West</Text>
+                  </View>
                 </View>
+
+                <Text style={[styles.affordabilitySub, { marginTop: 16 }]}>Generic equivalents available at government outlets:</Text>
+
+                {genericAlts.map((item, idx) => (
+                  <View key={idx} style={styles.genericItem}>
+                    <View style={styles.genericInfo}>
+                      <Text style={styles.brandName}>{item.brand_name}</Text>
+                      <Ionicons name="arrow-forward" size={14} color="#9CA3AF" />
+                      <Text style={styles.genericName}>{item.generic_name}</Text>
+                    </View>
+                    <View style={styles.priceRow}>
+                      <Text style={styles.marketPrice}>₹{item.market_price}</Text>
+                      <Text style={styles.janPrice}>₹{item.jan_aushadhi_price}</Text>
+                    </View>
+                  </View>
+                ))}
+
+                <TouchableOpacity style={styles.findStoreBtn} onPress={handleExportJanAushadhiPDF}>
+                  <Text style={styles.findStoreText}>Download Jan Aushadhi Prescription</Text>
+                  <Ionicons name="download-outline" size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.findStoreBtn, { backgroundColor: '#10B981', marginTop: 12 }]} onPress={handleFindNearestStore}>
+                  <Text style={styles.findStoreText}>{findingStore ? 'Locating...' : 'Find Kendras on Map'}</Text>
+                  <Ionicons name={findingStore ? 'hourglass-outline' : 'map-outline'} size={16} color="#FFFFFF" />
+                </TouchableOpacity>
               </View>
-            ))}
-            {genericAlts.length > 0 && (
-              <>
-                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>💊 Affordable Alternatives</Text>
-                <View style={styles.affordabilityCard}>
-                  <View style={styles.affordabilityHeader}>
-                    <Text style={styles.affordabilityTitle}>Pradhan Mantri Jan Aushadhi</Text>
-                    <View style={styles.savingsBadge}>
-                      <Text style={styles.savingsBadgeText}>Save up to 80%</Text>
-                    </View>
-                  </View>
+            </>
+          )}
 
-                  <View style={styles.engineOutputBox}>
-                    <View style={styles.engineRow}>
-                      <Text style={styles.engineLabel}>Current monthly cost:</Text>
-                      <Text style={styles.engineValueRed}>&#8377;{(genericAlts.reduce((sum, item) => sum + item.market_price, 0) || 1840).toLocaleString('en-IN')}</Text>
-                    </View>
-                    <View style={styles.engineRow}>
-                      <Text style={styles.engineLabel}>Jan Aushadhi cost:</Text>
-                      <Text style={styles.engineValueGreen}>&#8377;{(genericAlts.reduce((sum, item) => sum + item.jan_aushadhi_price, 0) || 210).toLocaleString('en-IN')}</Text>
-                    </View>
-                    <View style={styles.engineRow}>
-                      <Text style={styles.engineLabel}>Monthly savings:</Text>
-                      <Text style={styles.engineValueGreenSave}>&#8377;{((genericAlts.reduce((sum, item) => sum + item.market_price, 0) || 1840) - (genericAlts.reduce((sum, item) => sum + item.jan_aushadhi_price, 0) || 210)).toLocaleString('en-IN')}</Text>
-                    </View>
-                    <View style={styles.engineRow}>
-                      <Text style={styles.engineLabel}>Annual savings:</Text>
-                      <Text style={styles.engineValueGreenSave}>&#8377;{(((genericAlts.reduce((sum, item) => sum + item.market_price, 0) || 1840) - (genericAlts.reduce((sum, item) => sum + item.jan_aushadhi_price, 0) || 210)) * 12).toLocaleString('en-IN')}</Text>
-                    </View>
-                    <View style={styles.engineDivider} />
-                    <View style={styles.engineRow}>
-                      <Text style={styles.engineLabel}>Eligible scheme:</Text>
-                      <Text style={styles.engineValueBlue} numberOfLines={1}>PM-JAY (&#8377;5L cov)</Text>
-                    </View>
-                    <View style={styles.engineRow}>
-                      <Text style={styles.engineLabel}>Nearest store:</Text>
-                      <Text style={styles.engineValueDark}>Jan Aushadhi, Dadar West</Text>
-                    </View>
-                  </View>
-
-                  <Text style={[styles.affordabilitySub, { marginTop: 16 }]}>Generic equivalents available at government outlets:</Text>
-
-                  {genericAlts.map((item, idx) => (
-                    <View key={idx} style={styles.genericItem}>
-                      <View style={styles.genericInfo}>
-                        <Text style={styles.brandName}>{item.brand_name}</Text>
-                        <Ionicons name="arrow-forward" size={14} color="#9CA3AF" />
-                        <Text style={styles.genericName}>{item.generic_name}</Text>
-                      </View>
-                      <View style={styles.priceRow}>
-                        <Text style={styles.marketPrice}>&#8377;{item.market_price}</Text>
-                        <Text style={styles.janPrice}>&#8377;{item.jan_aushadhi_price}</Text>
-                      </View>
-                    </View>
-                  ))}
-
-                  <TouchableOpacity style={styles.findStoreBtn} onPress={handleExportJanAushadhiPDF}>
-                    <Text style={styles.findStoreText}>Download Jan Aushadhi Prescription</Text>
-                    <Ionicons name="download-outline" size={16} color="#FFFFFF" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={[styles.findStoreBtn, { backgroundColor: '#10B981', marginTop: 12 }]} onPress={handleFindNearestStore}>
-                    <Text style={styles.findStoreText}>{findingStore ? 'Locating...' : 'Find Kendras on Map'}</Text>
-                    <Ionicons name={findingStore ? 'hourglass-outline' : 'map-outline'} size={16} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-            <View style={{ height: 40 }} />
-          </ScrollView>
-        )}
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      )}
 
       {/* Add Med Modal */}
       <Modal transparent animationType="slide" visible={addModalVisible}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Ionicons name="add-circle-outline" size={22} color="#0474FC" />
-              <Text style={styles.modalTitle}>Add Medication</Text>
+              <View style={styles.modalHeaderLeft}>
+                <Ionicons name="add-circle-outline" size={22} color="#0474FC" />
+                <Text style={styles.modalTitle}>Add Medication</Text>
+              </View>
               <TouchableOpacity onPress={() => setAddModalVisible(false)}>
                 <Ionicons name="close" size={24} color="#6B7280" />
               </TouchableOpacity>
@@ -616,8 +575,10 @@ export default function MedsScreen() {
       <Modal visible={isMapVisible} animationType="slide">
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
           <View style={[styles.modalHeader, { paddingHorizontal: 16, paddingTop: 16 }]}>
-            <Ionicons name="location" size={24} color="#0EA5E9" />
-            <Text style={styles.modalTitle}>Jan Aushadhi Stores</Text>
+            <View style={styles.modalHeaderLeft}>
+              <Ionicons name="location" size={24} color="#0EA5E9" />
+              <Text style={styles.modalTitle}>Jan Aushadhi Stores</Text>
+            </View>
             <TouchableOpacity onPress={() => setIsMapVisible(false)}>
               <Ionicons name="close" size={24} color="#111827" />
             </TouchableOpacity>
@@ -635,13 +596,13 @@ export default function MedsScreen() {
               </View>
             )}
           </View>
-          <View style={{ padding: 16, backgroundColor: '#F0F9FF' }}>
-            <Text style={{ fontWeight: '700', color: '#0369A1', marginBottom: 8 }}>Nearest Kendras ({nearbyStores.length}):</Text>
+          <View style={styles.storeFooter}>
+            <Text style={styles.storeFooterTitle}>Nearest Kendras ({nearbyStores.length}):</Text>
             {nearbyStores.map((store: any) => (
-              <View key={store.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={{ flex: 1, fontSize: 13, color: '#374151' }}>{store.area} ({store.distance_km}km)</Text>
+              <View key={store.id} style={styles.storeRow}>
+                <Text style={styles.storeName}>{store.area} ({store.distance_km}km)</Text>
                 <TouchableOpacity onPress={() => openDirections(store)}>
-                  <Text style={{ color: '#0EA5E9', fontWeight: '600', fontSize: 13 }}>Navigate</Text>
+                  <Text style={styles.navigateText}>Navigate</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -659,18 +620,24 @@ export default function MedsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
+  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
   scrollContent: { padding: 16, paddingBottom: 100 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 22, fontWeight: '700', color: '#111827' },
+
+  // Header
+  headerSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: '700', color: '#111827' },
   subtitle: { fontSize: 14, color: '#6B7280', marginTop: 2 },
+  headerActions: { flexDirection: 'row', gap: 8 },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#0474FC', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   addBtnText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
   exportBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(4, 116, 252, 0.1)', alignItems: 'center', justifyContent: 'center' },
+
   sectionLabel: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12, marginTop: 4 },
 
+  // Calendar
   calendarCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  cardTitle: { fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 12 },
+  calendarHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  cardTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   dayCol: { alignItems: 'center', gap: 6 },
   dayLabel: { fontSize: 12, color: '#6B7280', fontWeight: '600' },
@@ -684,6 +651,7 @@ const styles = StyleSheet.create({
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 11, color: '#6B7280' },
 
+  // Analytics
   analyticsCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   barsRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 80, marginBottom: 8 },
   barCol: { alignItems: 'center', gap: 4 },
@@ -693,6 +661,7 @@ const styles = StyleSheet.create({
   barLabel: { fontSize: 11, color: '#6B7280' },
   analyticsNote: { fontSize: 12, color: '#6B7280', textAlign: 'center', marginTop: 4 },
 
+  // Medication Card
   medCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   medInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   medIconBg: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#E8F1FE', alignItems: 'center', justifyContent: 'center' },
@@ -705,10 +674,12 @@ const styles = StyleSheet.create({
   logButton: { padding: 4 },
   logButtonTaken: { opacity: 0.7 },
 
+  // Modals
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  modalTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: '#111827' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  modalHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
   modalMed: { fontSize: 16, fontWeight: '600', color: '#0474FC', marginBottom: 4 },
   modalSub: { fontSize: 12, color: '#6B7280', marginBottom: 16 },
   analysingBox: { backgroundColor: '#0F172A', borderRadius: 12, padding: 16, marginBottom: 16 },
@@ -721,29 +692,12 @@ const styles = StyleSheet.create({
   submitModalBtn: { backgroundColor: '#0474FC', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   submitModalText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
 
-  topNavContainer: { paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 50 : 40, paddingBottom: 12, backgroundColor: '#F9FAFB' },
-  topNavBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 5 },
-  leftButton: { shadowColor: '#0474FC', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
-  gradientButton: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  centerPill: { flex: 1, marginHorizontal: 12 },
-  pillContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20 },
-  blueDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0474FC', marginRight: 8 },
-  pillText: { fontSize: 13, fontWeight: '600', letterSpacing: 1.2, color: '#1F2937' },
-  rightSection: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconButton: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
-  iconContainer: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  notificationBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: '#EF4444', borderRadius: 10, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#FFFFFF' },
-  badgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
-  avatarButton: { shadowColor: '#0474FC', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
-  avatarGradient: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
-
+  // Affordability
   affordabilityCard: { backgroundColor: '#F0F9FF', borderRadius: 16, padding: 16, borderLeftWidth: 4, borderLeftColor: '#0EA5E9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   affordabilityHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   affordabilityTitle: { fontSize: 14, fontWeight: '700', color: '#0369A1' },
   savingsBadge: { backgroundColor: '#BAE6FD', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   savingsBadgeText: { fontSize: 10, fontWeight: '700', color: '#0369A1' },
-
   engineOutputBox: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 12, marginTop: 4, marginBottom: 4 },
   engineRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   engineLabel: { fontSize: 13, color: '#4B5563', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
@@ -753,7 +707,6 @@ const styles = StyleSheet.create({
   engineValueBlue: { fontSize: 13, color: '#0EA5E9', fontWeight: '700', flex: 1, textAlign: 'right', marginLeft: 8 },
   engineValueDark: { fontSize: 13, color: '#111827', fontWeight: '600', flex: 1, textAlign: 'right', marginLeft: 8 },
   engineDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 },
-
   affordabilitySub: { fontSize: 12, color: '#0369A1', marginBottom: 16, opacity: 0.8 },
   genericItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 10, borderRadius: 12, marginBottom: 8 },
   genericInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -764,4 +717,11 @@ const styles = StyleSheet.create({
   janPrice: { fontSize: 14, fontWeight: '800', color: '#0EA5E9' },
   findStoreBtn: { backgroundColor: '#0EA5E9', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
   findStoreText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+
+  // Map Footer
+  storeFooter: { padding: 16, backgroundColor: '#F0F9FF' },
+  storeFooterTitle: { fontWeight: '700', color: '#0369A1', marginBottom: 8 },
+  storeRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  storeName: { flex: 1, fontSize: 13, color: '#374151' },
+  navigateText: { color: '#0EA5E9', fontWeight: '600', fontSize: 13 },
 });
