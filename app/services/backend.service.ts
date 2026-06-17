@@ -190,7 +190,7 @@ export const backendService = {
         return {
             success: true,
             data: {
-                patient_name: "Rahul Kumar",
+                patient_name: "Indresh Suresh",
                 report_date: "2026-06-10",
                 key_findings: "Normal lipid profile. Hemoglobin: 14.5 g/dL (Normal). Blood Glucose (Fasting): 98 mg/dL (Normal).",
                 recommendations: "Continue a balanced diet. Repeat lipid profile in 6 months."

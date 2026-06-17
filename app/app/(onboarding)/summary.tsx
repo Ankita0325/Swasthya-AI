@@ -1,6 +1,17 @@
 // app/(onboarding)/summary.tsx
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, ActivityIndicator, Alert } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  ActivityIndicator,
+  Alert,
+  Platform,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +22,7 @@ import { getPatientById, getFamilyByPatientId, savePatientProfile } from '@/serv
 export default function SummaryScreen() {
   const params = useLocalSearchParams<{ profileData?: string }>();
   const { patientId, phoneNumber, setSessionState } = useAuthStore();
-  
+
   const [userName, setUserName] = useState('Indresh');
   const [userEmail, setUserEmail] = useState('indresh@example.com');
   const [familyDetails, setFamilyDetails] = useState<{ name: string; code: string } | null>(null);
@@ -33,7 +44,7 @@ export default function SummaryScreen() {
     alcohol: 'Never',
     emergency_contact: '+91 9876543210',
     surgeries: 'None',
-    vaccinations: 'COVID-19, Tetanus',
+    vaccinations: 'COVID-19 (2 doses), Tetanus',
   };
 
   if (params.profileData) {
@@ -53,14 +64,14 @@ export default function SummaryScreen() {
       try {
         const patient = await getPatientById(patientId);
         if (patient) {
-          setUserName(patient.name);
+          setUserName(patient.name || 'Indresh');
           if (patient.email) setUserEmail(patient.email);
         }
-        
+
         const family = await getFamilyByPatientId(patientId);
         if (family) {
           setFamilyDetails({
-            name: family.family_name || 'My Family Group',
+            name: family.family_name || 'Indresh Family',
             code: family.join_code || '',
           });
         }
@@ -109,9 +120,9 @@ export default function SummaryScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#07111f" />
-      
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -185,7 +196,7 @@ export default function SummaryScreen() {
               <Ionicons name="medkit-outline" size={18} color="#3B82F6" />
               <View style={styles.listItemTextContainer}>
                 <Text style={styles.listLabel}>Active Medications</Text>
-                <Text style={styles.listVal}>{profile.current_medication}</Text>
+                <Text style={styles.listVal}>{profile.current_medication || 'None'}</Text>
               </View>
             </View>
 
@@ -193,7 +204,7 @@ export default function SummaryScreen() {
               <Ionicons name="pulse" size={18} color="#8B5CF6" />
               <View style={styles.listItemTextContainer}>
                 <Text style={styles.listLabel}>Chronic Conditions</Text>
-                <Text style={styles.listVal}>{profile.chronic_diseases}</Text>
+                <Text style={styles.listVal}>{profile.chronic_diseases || 'None'}</Text>
               </View>
             </View>
 
@@ -201,7 +212,7 @@ export default function SummaryScreen() {
               <Ionicons name="bandage-outline" size={18} color="#EF4444" />
               <View style={styles.listItemTextContainer}>
                 <Text style={styles.listLabel}>Past Surgeries</Text>
-                <Text style={styles.listVal}>{profile.surgeries}</Text>
+                <Text style={styles.listVal}>{profile.surgeries || 'None'}</Text>
               </View>
             </View>
 
@@ -209,7 +220,7 @@ export default function SummaryScreen() {
               <Ionicons name="shield-outline" size={18} color="#10B981" />
               <View style={styles.listItemTextContainer}>
                 <Text style={styles.listLabel}>Vaccination Status</Text>
-                <Text style={styles.listVal}>{profile.vaccinations}</Text>
+                <Text style={styles.listVal}>{profile.vaccinations || 'Up to date'}</Text>
               </View>
             </View>
 
@@ -217,15 +228,23 @@ export default function SummaryScreen() {
               <Ionicons name="people-outline" size={18} color="#8B5CF6" />
               <View style={styles.listItemTextContainer}>
                 <Text style={styles.listLabel}>Family History</Text>
-                <Text style={styles.listVal}>{profile.family_history}</Text>
+                <Text style={styles.listVal}>{profile.family_history || 'None'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.listItem}>
+              <Ionicons name="alert-circle-outline" size={18} color="#F59E0B" />
+              <View style={styles.listItemTextContainer}>
+                <Text style={styles.listLabel}>Allergies</Text>
+                <Text style={styles.listVal}>{profile.allergies || 'None'}</Text>
               </View>
             </View>
           </View>
         </View>
 
-        <TouchableOpacity 
-          style={[styles.button, isSaving && styles.buttonDisabled]} 
-          onPress={handleLaunch} 
+        <TouchableOpacity
+          style={[styles.button, isSaving && styles.buttonDisabled]}
+          onPress={handleLaunch}
           disabled={isSaving}
           activeOpacity={0.8}
         >
@@ -255,6 +274,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#07111f',
+    paddingTop: Platform.OS === 'ios' ? 0 : 8,
   },
   header: {
     paddingHorizontal: 16,
@@ -262,6 +282,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#1E293B',
     alignItems: 'center',
+    marginTop: Platform.OS === 'ios' ? 0 : 8,
   },
   headerTitle: {
     color: '#FFFFFF',

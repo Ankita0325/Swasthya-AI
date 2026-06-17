@@ -52,7 +52,7 @@ export default function FamilySetupScreen() {
     setSessionState({
       userId: 'skip-user-123',
       patientId: 'skip-patient-123',
-      phoneNumber: '+91 9999999999',
+      phoneNumber: '+932447481291 ',
       isLoggedIn: true,
       hasProfile: false,
       hasFamilyGroup: true,

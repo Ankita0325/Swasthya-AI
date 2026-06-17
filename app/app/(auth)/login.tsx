@@ -356,7 +356,7 @@ export default function LoginScreen() {
     setSessionState({
       userId: 'skip-user-123',
       patientId: 'skip-patient-123',
-      phoneNumber: '+91 9999999999',
+      phoneNumber: '+91 9324474812',
       isLoggedIn: true,
       hasProfile: false,
       hasFamilyGroup: false,

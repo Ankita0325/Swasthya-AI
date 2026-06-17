@@ -42,7 +42,7 @@ const createMockSupabase = () => {
             if (table === 'users') {
                 return makePromise({
                     id: 'demo-patient-id',
-                    name: 'Rahul Kumar',
+                    name: 'Indresh Suresh',
                     age: 24,
                     gender: 'Male',
                     phone: '9324474812',
@@ -69,7 +69,7 @@ const createMockSupabase = () => {
                         role: 'admin',
                         patient: {
                             id: 'patient-1',
-                            name: 'Rahul Kumar',
+                            name: 'Indresh Suresh',
                             age: 24,
                             gender: 'Male',
                             phone: '9324474812',
