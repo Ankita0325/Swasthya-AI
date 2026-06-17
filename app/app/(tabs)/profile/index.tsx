@@ -74,9 +74,38 @@ export default function ProfileScreen() {
   ];
 
   const familyMembers = [
-    { id: 'm_1', name: 'Raj Kumar', age: 45, relationship: 'Father', risk: 'Moderate', phone: '+91 98765 43212' },
-    { id: 'm_2', name: 'Priya', age: 22, relationship: 'Sister', risk: 'Low', phone: '+91 98765 43213' },
-    { id: 'm_3', name: 'Sunita', age: 42, relationship: 'Mother', risk: 'Low', phone: '+91 98765 43214' },
+    { 
+      id: 'm_1', 
+      name: 'Indresh', 
+      age: 20, 
+      relationship: 'Father', 
+      risk: 'Moderate', 
+      phone: '+91 9324474812' 
+    },
+    { 
+      id: 'm_2', 
+      name: 'Monish', 
+      age: 15, 
+      relationship: 'Child', 
+      risk: 'Low', 
+      phone: '+91 9372962545' 
+    },
+    { 
+      id: 'm_3', 
+      name: 'Divya', 
+      age: 42, 
+      relationship: 'Mother', 
+      risk: 'Low', 
+      phone: '+91 7559302315' 
+    },
+    { 
+      id: 'm_4', 
+      name: 'Ankita', 
+      age: 10, 
+      relationship: 'Child', 
+      risk: 'Low', 
+      phone: '+91 9970206614' 
+    },
   ];
 
   const handleShareQR = async () => {
@@ -146,7 +175,7 @@ export default function ProfileScreen() {
     "Swasthya AI has analyzed your health patterns. You show moderate risk factors with headache and anxiety being primary concerns. Regular monitoring and stress management recommended. Your adherence rate is 85% with stable vitals.";
 
   const familyAISummary =
-    "Swasthya AI has analyzed your family health patterns. Your family shows overall stable health trends with some shared symptoms. Your father has elevated blood pressure risks, while your sister shares similar headache patterns. Regular family health monitoring is recommended. Family adherence rate is 78%.";
+    "Swasthya AI has analyzed your family health patterns. Your family shows overall stable health trends with some shared symptoms. Your grandfather has mild age-related concerns, while your mother and child are in good health. Regular family health monitoring is recommended. Family adherence rate is 82%.";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -203,7 +232,7 @@ export default function ProfileScreen() {
               familyData={{ family_name: 'Indresh Family', join_code: '123321cc' }}
               onCopyFamilyCode={handleCopyFamilyCode}
               onSetupFamily={() => router.push('/(onboarding)/family-setup')}
-              membersCount={3}
+              membersCount={4}
               familyRiskLevel="Moderate"
               getRiskColor={getRiskColor}
             />
@@ -217,7 +246,7 @@ export default function ProfileScreen() {
 
             <HealthStatsCard
               stats={[
-                { icon: 'people-outline', label: 'Members', value: '3', color: '#E0E7FF', iconColor: '#4F46E5' },
+                { icon: 'people-outline', label: 'Members', value: '4', color: '#E0E7FF', iconColor: '#4F46E5' },
                 { icon: 'fitness-outline', label: 'Conditions', value: '4', color: '#FEE2E2', iconColor: '#EF4444' },
                 { icon: 'document-text-outline', label: 'Records', value: '18', color: '#E8F1FE', iconColor: '#0474FC' },
               ]}
