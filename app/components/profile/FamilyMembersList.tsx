@@ -141,7 +141,7 @@ export const FamilyMembersList: React.FC<FamilyMembersListProps> = ({ members })
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>👨‍👩‍👧‍👦 Family Members</Text>
+      <Text style={styles.sectionTitle}>Family Members</Text>
       {members.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="people-outline" size={40} color={COLORS.text.secondary} />
