@@ -345,7 +345,14 @@ export default function LoginScreen() {
         router.replace('/');
       }
     } catch (e: any) {
-      showAlert('Google Auth Failed', e?.message ?? 'Something went wrong', 'error');
+      Alert.alert(
+        'Backend Connection Issue',
+        'Google authentication encountered a server connection error. Would you like to skip and continue in Offline Mode?',
+        [
+          { text: 'Try Again', style: 'cancel' },
+          { text: 'Use Offline Mode (Skip)', onPress: () => handleSkip() }
+        ]
+      );
     } finally {
       setLoading(false);
     }
@@ -485,7 +492,7 @@ export default function LoginScreen() {
                     style={s.skipButtonGradient}
                   >
                     <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                    <Text style={s.skipButtonText}>Skip to Next Page</Text>
+                    <Text style={s.skipButtonText}>Skip and Proceed Offline</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 

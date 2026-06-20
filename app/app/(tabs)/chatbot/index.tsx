@@ -29,6 +29,7 @@ import { backendService } from '@/services/backend.service';
 import { BACKEND_URL, API_ENDPOINTS } from '@/config/api';
 import Voice from '@react-native-voice/voice';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AgentLog } from '@/components/chatbot/AgentLog';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -137,6 +138,7 @@ export default function ChatScreen() {
 
   // History states
   const [showHistory, setShowHistory] = useState(false);
+  const [showAgentLog, setShowAgentLog] = useState(false);
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
   const slideAnim = useRef(new Animated.Value(0)).current;
   const { width: screenWidth } = Dimensions.get('window');
@@ -515,6 +517,7 @@ export default function ChatScreen() {
           patient_context: context,
         }),
       });
+      if (!response.ok) throw new Error("Backend connection issue");
       const data = await response.json();
       const reply = data.bot_reply || (voiceLang === 'hi-IN' ? getFallbackReplyHindi(spokenText) : getFallbackReply(spokenText));
       speakAIVoiceResponse(reply);
@@ -655,7 +658,10 @@ export default function ChatScreen() {
         patient_context: context,
       }),
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Backend connection issue");
+        return res.json();
+      })
       .then(data => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         const aiResponse: Message = {
@@ -683,20 +689,14 @@ export default function ChatScreen() {
   };
 
   const handleEndSession = async () => {
-    setIsLoading(true);
-    try {
-      await backendService.endSession(
-        user?.id || 'patient-123',
-        messages.map(m => ({ role: m.isUser ? 'user' : 'assistant', content: m.text })),
-        ""
-      );
-      router.push('/(tabs)/home');
-    } catch (e) {
-      console.error("End session error:", e);
-      router.push('/(tabs)/home');
-    } finally {
-      setIsLoading(false);
-    }
+    setShowHistory(false);
+    setShowAgentLog(true);
+    // Execute backend call in background to prevent blocking during cold-starts
+    backendService.endSession(
+      user?.id || 'patient-123',
+      messages.map(m => ({ role: m.isUser ? 'user' : 'assistant', content: m.text })),
+      ""
+    ).catch(e => console.error("End session error in background:", e));
   };
 
   const formatTime = (date: Date) => {
@@ -1081,6 +1081,13 @@ export default function ChatScreen() {
 
       {/* Voice Overlay */}
       {renderVoiceOverlay()}
+
+      {/* Agent Log Overlay */}
+      {showAgentLog && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <AgentLog onClose={() => setShowAgentLog(false)} />
+        </View>
+      )}
     </SafeAreaView>
   );
 }

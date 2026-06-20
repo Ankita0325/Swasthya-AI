@@ -58,22 +58,22 @@ export default function TabLayout() {
   }, [fabPulseRing, fabShadowAnim]);
 
   const getActiveTab = () => {
+    if ((segments as string[]).includes('chatbot')) return 4;
     const currentRoute = segments[segments.length - 1];
     if (currentRoute === 'home') return 0;
     if (currentRoute === 'checkin') return 1;
     if (currentRoute === 'meds') return 2;
     if (currentRoute === 'profile') return 3;
-    if (currentRoute === 'chatbot') return 4;
     return 0;
   };
 
   const getTabTitle = () => {
+    if ((segments as string[]).includes('chatbot')) return 'CHAT';
     const currentRoute = segments[segments.length - 1];
     if (currentRoute === 'home') return 'HOME';
     if (currentRoute === 'checkin') return 'CHECK-IN';
     if (currentRoute === 'meds') return 'MEDICATIONS';
     if (currentRoute === 'profile') return 'PROFILE';
-    if (currentRoute === 'chatbot') return 'CHAT';
     return 'SWASTHYA';
   };
 

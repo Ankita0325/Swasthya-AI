@@ -421,9 +421,15 @@ const GraphView = ({ data, onNodeSelect }: { data: any, onNodeSelect: (node: any
 };
 
 // --- MAIN COMPONENT ---
-export const HealthGraphCard = () => {
-  const [showModal, setShowModal] = useState(false);
+export const HealthGraphCard = ({ autoOpen = false }: { autoOpen?: boolean }) => {
+  const [showModal, setShowModal] = useState(autoOpen);
   const [selectedNode, setSelectedNode] = useState<any>(null);
+
+  useEffect(() => {
+    if (autoOpen) {
+      setShowModal(true);
+    }
+  }, [autoOpen]);
 
   const totalNodes = GRAPH_DATA.nodes.length;
   const totalRelationships = GRAPH_DATA.edges.length;
@@ -483,7 +489,7 @@ export const HealthGraphCard = () => {
             
             {/* Top Confidence Banner */}
             <View style={styles.modalTopBanner}>
-              <MaterialCommunityIcons name="shield-check" size={18} color={COLORS.risk?.low || '#10B981'} />
+              <MaterialCommunityIcons name="shield-check" size={18} color={'#10B981'} />
               <Text style={styles.bannerText}>AI Confidence Score: <Text style={{color: '#FFF'}}>92%</Text></Text>
             </View>
 

@@ -540,6 +540,26 @@ export default function MedsScreen() {
     });
   };
 
+  const handleDeleteMed = (id: string | number, name: string) => {
+    Alert.alert(
+      'Delete Medication',
+      `Are you sure you want to remove "${name}" from your active list?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const updated = medications.filter((m, idx) => (m.id || idx) !== id);
+            setMedications(updated);
+            await AsyncStorage.setItem(`@active_medications_${patientId}`, JSON.stringify(updated));
+            recalculateSavings(updated);
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -599,6 +619,12 @@ export default function MedsScreen() {
                     size={28}
                     color={takenToday[med.medicine_name] ? '#10B981' : '#0474FC'}
                   />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() => handleDeleteMed(med.id || index, med.medicine_name)}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -697,6 +723,18 @@ export default function MedsScreen() {
               value={newMedName}
               onChangeText={setNewMedName}
             />
+            <Text style={{ fontSize: 12, color: '#4B5563', marginBottom: 6, fontWeight: '600' }}>Suggestions:</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              {['Glycomet 500mg', 'Amlokind 5mg', 'Calcirol 60k'].map((med) => (
+                <TouchableOpacity
+                  key={med}
+                  onPress={() => setNewMedName(med)}
+                  style={{ backgroundColor: '#E8F2FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}
+                >
+                  <Text style={{ fontSize: 12, color: '#0474FC', fontWeight: '600' }}>{med}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             {isSearching && (
               <ActivityIndicator size="small" color="#0474FC" style={{ marginBottom: 12 }} />
             )}
@@ -908,5 +946,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#10B981',
+  },
+  deleteBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
