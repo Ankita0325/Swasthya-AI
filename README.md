@@ -2,7 +2,7 @@
 
 > A multilingual, voice-enabled health memory system. Patients build a connected health graph over time through natural conversation; doctors get instant, explainable context the moment they scan a patient's QR.
 
-Read [`Swasthya_AI.md`](./Swasthya_AI.md) first for the full idea.
+Read [`Swasthya_AI.md`](docs/Swasthya_AI.md) first for the full idea.
 
 ---
 
@@ -145,7 +145,7 @@ Run `database/schema.sql` against your Supabase project to set up structured tab
 
 ## Hackathon Tracks
 
-This project is built to satisfy five tracks simultaneously — see [`Tracks/`](./Tracks/) for how each requirement is met:
+This project is built to satisfy five tracks simultaneously — see [`Tracks/`](docs/Tracks/) for how each requirement is met:
 
 - **Expo** — the patient app is Expo/React Native end-to-end
 - **Neo4j AuraDB** — the health graph is the core reasoning layer, not a side feature

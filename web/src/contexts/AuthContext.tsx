@@ -44,6 +44,57 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if skipLogin is enabled
+    const isSkipLogin = localStorage.getItem('skipLogin') === 'true';
+    if (isSkipLogin) {
+      const guestUser: User = {
+        id: 'guest-doctor',
+        fullName: 'Dr. Divya Sharma',
+        email: 'divya.sharma@swasthya.com',
+        phoneNumber: '7559302315',
+        role: 'doctor',
+        specialization: 'General Physician / Internal Medicine',
+        registrationNumber: 'MCI-12345',
+        qualification: 'MBBS, MD (Internal Medicine)',
+        yearsOfExperience: '35 Years',
+        aboutMe: 'Dr. Divya Sharma is a veteran of internal medicine in Mumbai, focusing on preventive care, lifestyle disease management, and family health memory tracing.',
+        consultationFee: '500',
+        timings: '10:00 AM - 5:00 PM',
+        languages: 'English, Hindi, Marathi',
+        gender: 'Female',
+        dateOfBirth: '1966-08-15',
+        isVerified: true
+      };
+
+      const guestProfile: DoctorProfile = {
+        id: 'guest-doctor',
+        user_id: 'guest-doctor',
+        full_name: 'Dr. Divya Sharma',
+        email: 'divya.sharma@swasthya.com',
+        phone_number: '7559302315',
+        role: 'doctor',
+        specialization: 'General Physician / Internal Medicine',
+        registration_number: 'MCI-12345',
+        qualification: 'MBBS, MD (Internal Medicine)',
+        years_of_experience: '35 Years',
+        about_me: 'Dr. Divya Sharma is a veteran of internal medicine in Mumbai, focusing on preventive care, lifestyle disease management, and family health memory tracing.',
+        consultation_fee: '500',
+        timings: '10:00 AM - 5:00 PM',
+        languages: 'English, Hindi, Marathi',
+        gender: 'Female',
+        date_of_birth: '1966-08-15',
+        is_verified: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      setUser(guestUser);
+      setProfile(guestProfile);
+      setIsAuthenticated(true);
+      setLoading(false);
+      return;
+    }
+
     // Get session from Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -295,6 +346,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
+      localStorage.removeItem('skipLogin');
+      localStorage.removeItem('user');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error) {
