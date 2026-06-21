@@ -1,195 +1,114 @@
 // src/components/common/Navbar.tsx
-import React, { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import ThemeToggle from './ThemeToggle';
+import Button from '../ui/Button';
 
-const Navbar: React.FC = () => {
-  const { user, logout } = useAuth();
+export const Navbar: React.FC = () => {
   const navigate = useNavigate();
-  const [showDropdown, setShowDropdown] = useState(false);
+  const location = useLocation();
+  const [scrolled, setScrolled] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const isSkipLogin = localStorage.getItem('skipLogin') === 'true';
 
   return (
-    <nav style={styles.navbar}>
-      <div style={styles.navbarLeft}>
-        <h1 style={styles.welcomeText}>
-          Welcome back, <span style={styles.userName}>{user?.name || 'Guest'}!</span>
-        </h1>
-        <p style={styles.subtitle}>Here's your health overview for today</p>
+    <nav
+      style={{
+        position: 'fixed',
+        top: scrolled ? '12px' : '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: scrolled ? 'calc(100% - 64px)' : 'calc(100% - 48px)',
+        maxWidth: '1200px',
+        height: scrolled ? '60px' : '72px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 24px',
+        zIndex: 1000,
+        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        backgroundColor: 'var(--navbar-bg)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid var(--border)',
+        borderRadius: scrolled ? '16px' : '24px',
+        boxShadow: scrolled ? 'var(--shadow-lg)' : 'var(--shadow)',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* Logo */}
+      <div
+        onClick={() => navigate('/')}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          cursor: 'pointer',
+          color: 'var(--text-primary)',
+        }}
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" />
+          <path d="M2 17l10 5 10-5" />
+          <path d="M2 12l10 5 10-5" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '0.5px' }}>Swasthya AI</span>
       </div>
 
-      <div style={styles.navbarRight}>
-        {/* User Dropdown */}
-        <div style={styles.userMenu}>
-          <button 
-            onClick={() => setShowDropdown(!showDropdown)} 
-            style={styles.userButton}
-          >
-            <div style={styles.userAvatar}>
-              {user?.name?.[0] || 'U'}
-            </div>
-            <div style={styles.userInfo}>
-              <span style={styles.userNameText}>{user?.name || 'User'}</span>
-              <span style={styles.userEmail}>{user?.email || 'user@example.com'}</span>
-            </div>
-          </button>
+      {/* Navigation Links */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: location.pathname === '/' ? 'var(--accent)' : 'var(--text-secondary)',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: '4px 8px'
+          }}
+        >
+          Home
+        </button>
+        <button
+          onClick={() => navigate('/about')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: location.pathname === '/about' ? 'var(--accent)' : 'var(--text-secondary)',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: '4px 8px'
+          }}
+        >
+          About Platform
+        </button>
+      </div>
 
-          {showDropdown && (
-            <div style={styles.dropdown}>
-              <button onClick={() => navigate('/profile')} style={styles.dropdownItem}>
-                👤 Profile
-              </button>
-              <button onClick={() => navigate('/settings')} style={styles.dropdownItem}>
-                ⚙️ Settings
-              </button>
-              <hr style={styles.dropdownDivider} />
-              <button onClick={handleLogout} style={{...styles.dropdownItem, ...styles.logoutItem}}>
-                🚪 Logout
-              </button>
-            </div>
-          )}
-        </div>
+      {/* Right Side: Theme Toggle & Portal Access */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <ThemeToggle />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(isSkipLogin ? '/dashboard' : '/auth')}
+        >
+          Doctor Hub &rarr;
+        </Button>
       </div>
     </nav>
   );
 };
-
-const styles = {
-  navbar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '20px 32px',
-    background: 'white',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-    borderBottom: '1px solid #e0e7ff',
-  },
-  navbarLeft: {
-    flex: 1,
-  },
-  welcomeText: {
-    fontSize: '24px',
-    fontWeight: '600',
-    color: '#1e293b',
-    margin: 0,
-  },
-  userName: {
-    background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#64748b',
-    margin: '4px 0 0 0',
-  },
-  navbarRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  userMenu: {
-    position: 'relative' as const,
-  },
-  userButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '6px 12px',
-    borderRadius: '12px',
-    transition: 'background 0.2s',
-  },
-  userAvatar: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    fontWeight: '600',
-    fontSize: '16px',
-  },
-  userInfo: {
-    textAlign: 'left' as const,
-  },
-  userNameText: {
-    display: 'block',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1e293b',
-  },
-  userEmail: {
-    display: 'block',
-    fontSize: '12px',
-    color: '#64748b',
-  },
-  dropdown: {
-    position: 'absolute' as const,
-    top: '100%',
-    right: 0,
-    marginTop: '8px',
-    background: 'white',
-    borderRadius: '12px',
-    boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-    minWidth: '200px',
-    overflow: 'hidden',
-    zIndex: 1000,
-  },
-  dropdownItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '12px 16px',
-    width: '100%',
-    border: 'none',
-    background: 'white',
-    cursor: 'pointer',
-    fontSize: '14px',
-    color: '#1e293b',
-    transition: 'background 0.2s',
-  },
-  logoutItem: {
-    color: '#dc2626',
-  },
-  dropdownDivider: {
-    margin: 0,
-    border: 'none',
-    borderTop: '1px solid #e2e8f0',
-  },
-};
-
-// Add hover effects with CSS
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-  button:hover {
-    background: #f1f5f9 !important;
-    transform: translateY(-1px);
-  }
-  
-  .dropdown-item:hover {
-    background: #f8fafc !important;
-  }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-`;
-document.head.appendChild(styleSheet);
 
 export default Navbar;

@@ -1,7 +1,7 @@
 // src/pages/Medicine.tsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Medicine } from '../types/medicine';
+import type { Medicine } from '../types/medicine';
 import '../styles/medicine.css';
 
 const Medicine: React.FC = () => {

@@ -1,15 +1,56 @@
 // src/pages/Landing.tsx
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Navbar from '../components/common/Navbar';
+import ParticleField from '../components/landing/ParticleField';
+import HeroSection from '../components/landing/HeroSection';
+import LandingFeatureGrid from '../components/landing/LandingFeatureGrid';
+import LandingCTA from '../components/landing/LandingCTA';
+import Footer from '../components/common/Footer';
 
-const Landing: React.FC = () => {
+export const Landing: React.FC = () => {
   return (
-    <div className="landing-container">
-      <h1>Welcome to Swasthya-AI</h1>
-      <p>Your AI-powered healthcare platform</p>
-      <Link to="/login">
-        <button>Get Started</button>
-      </Link>
+    <div
+      className="landing-page-container"
+      style={{
+        backgroundColor: 'var(--bg)',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        overflowX: 'hidden',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* Scrollable Public Navigation */}
+      <Navbar />
+
+      {/* Hero Section with Canvas Particle Background Layer */}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          minHeight: '85vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* Interactive Canvas Background */}
+        <ParticleField />
+
+        {/* Hero Copy / CTA Overlays */}
+        <HeroSection />
+      </div>
+
+      {/* Core Features Overview */}
+      <LandingFeatureGrid />
+
+      {/* CTA Box */}
+      <LandingCTA />
+
+      {/* Global Footer */}
+      <Footer />
     </div>
   );
 };

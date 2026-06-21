@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import ThemeToggle from './ThemeToggle';
 import '../../styles/layout.css';
 
 const Layout: React.FC = () => {
@@ -114,82 +115,85 @@ const Layout: React.FC = () => {
             ))}
           </div>
 
-          <div className="nav-profile">
-            <button 
-              className="profile-btn"
-              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-            >
-              <div className="profile-avatar">
-                {user?.name?.[0] || 'D'}
-                <span className="profile-status" />
-              </div>
-              <div className="profile-info">
-                <span className="profile-name">{user?.name || 'Doctor'}</span>
-                <span className="profile-role">Online</span>
-              </div>
-              <span className={`profile-arrow ${showProfileDropdown ? 'open' : ''}`}>▾</span>
-            </button>
-
-            {showProfileDropdown && (
-              <div className="profile-dropdown">
-                <div className="dropdown-header">
-                  <div className="dropdown-avatar">
-                    {user?.name?.[0] || 'D'}
-                  </div>
-                  <div className="dropdown-info">
-                    <span className="dropdown-name">{user?.name || 'Doctor'}</span>
-                    <span className="dropdown-email">{user?.phoneNumber || 'doctor@swasthya.com'}</span>
-                    <span className="dropdown-status">● Online</span>
-                  </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <ThemeToggle />
+            <div className="nav-profile">
+              <button 
+                className="profile-btn"
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+              >
+                <div className="profile-avatar">
+                  {user?.fullName?.[0] || 'D'}
+                  <span className="profile-status" />
                 </div>
-                <div className="dropdown-divider"></div>
-                <button className="dropdown-item" onClick={() => navigate('/profile')}>
-                  <span className="dropdown-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                  </span>
-                  <div className="dropdown-item-content">
-                    <span>Profile</span>
-                    <span className="dropdown-item-sub">View your profile</span>
+                <div className="profile-info">
+                  <span className="profile-name">{user?.fullName || 'Doctor'}</span>
+                  <span className="profile-role">Online</span>
+                </div>
+                <span className={`profile-arrow ${showProfileDropdown ? 'open' : ''}`}>▾</span>
+              </button>
+
+              {showProfileDropdown && (
+                <div className="profile-dropdown">
+                  <div className="dropdown-header">
+                    <div className="dropdown-avatar">
+                      {user?.fullName?.[0] || 'D'}
+                    </div>
+                    <div className="dropdown-info">
+                      <span className="dropdown-name">{user?.fullName || 'Doctor'}</span>
+                      <span className="dropdown-email">{user?.phoneNumber || 'doctor@swasthya.com'}</span>
+                      <span className="dropdown-status">● Online</span>
+                    </div>
                   </div>
-                </button>
-                <button className="dropdown-item" onClick={() => navigate('/settings')}>
-                  <span className="dropdown-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M12 1v4" />
-                      <path d="M12 19v4" />
-                      <path d="M4.22 4.22l2.83 2.83" />
-                      <path d="M16.95 16.95l2.83 2.83" />
-                      <path d="M1 12h4" />
-                      <path d="M19 12h4" />
-                      <path d="M4.22 19.78l2.83-2.83" />
-                      <path d="M16.95 7.05l2.83-2.83" />
-                    </svg>
-                  </span>
-                  <div className="dropdown-item-content">
-                    <span>Settings</span>
-                    <span className="dropdown-item-sub">Manage preferences</span>
-                  </div>
-                </button>
-                <div className="dropdown-divider"></div>
-                <button className="dropdown-item logout" onClick={handleLogout}>
-                  <span className="dropdown-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <polyline points="16 17 21 12 16 7" />
-                      <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
-                  </span>
-                  <div className="dropdown-item-content">
-                    <span>Logout</span>
-                    <span className="dropdown-item-sub">Sign out of your account</span>
-                  </div>
-                </button>
-              </div>
-            )}
+                  <div className="dropdown-divider"></div>
+                  <button className="dropdown-item" onClick={() => navigate('/profile')}>
+                    <span className="dropdown-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </span>
+                    <div className="dropdown-item-content">
+                      <span>Profile</span>
+                      <span className="dropdown-item-sub">View your profile</span>
+                    </div>
+                  </button>
+                  <button className="dropdown-item" onClick={() => navigate('/settings')}>
+                    <span className="dropdown-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M12 1v4" />
+                        <path d="M12 19v4" />
+                        <path d="M4.22 4.22l2.83 2.83" />
+                        <path d="M16.95 16.95l2.83 2.83" />
+                        <path d="M1 12h4" />
+                        <path d="M19 12h4" />
+                        <path d="M4.22 19.78l2.83-2.83" />
+                        <path d="M16.95 7.05l2.83-2.83" />
+                      </svg>
+                    </span>
+                    <div className="dropdown-item-content">
+                      <span>Settings</span>
+                      <span className="dropdown-item-sub">Manage preferences</span>
+                    </div>
+                  </button>
+                  <div className="dropdown-divider"></div>
+                  <button className="dropdown-item logout" onClick={handleLogout}>
+                    <span className="dropdown-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                      </svg>
+                    </span>
+                    <div className="dropdown-item-content">
+                      <span>Logout</span>
+                      <span className="dropdown-item-sub">Sign out of your account</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </nav>
