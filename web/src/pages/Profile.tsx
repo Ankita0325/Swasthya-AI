@@ -1,5 +1,6 @@
 // src/pages/Profile.tsx
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import '../styles/profile.css';
 
@@ -26,6 +27,7 @@ interface Availability {
 }
 
 const Profile: React.FC = () => {
+  const navigate = useNavigate();
   const { user, profile, isAuthenticated, loading, updateProfile } = useAuth();
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -154,12 +156,18 @@ const Profile: React.FC = () => {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="profile-wrapper">
+      <div className="profile-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 120px)', padding: '24px' }}>
         <div className="profile-not-logged-in">
+          <div className="lock-icon-wrapper">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
           <h2>Please Log In</h2>
           <p>You need to be logged in to view your profile.</p>
-          <button className="profile-login-btn" onClick={() => window.location.href = '/login'}>
-            Go to Login
+          <button className="profile-login-btn" onClick={() => navigate('/auth')}>
+            Go to Doctor Hub &rarr;
           </button>
         </div>
       </div>

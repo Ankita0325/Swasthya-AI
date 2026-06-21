@@ -172,9 +172,12 @@ export const PatientHealthGraph: React.FC = () => {
     return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
-  // Mouse Drag handlers
-  const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
+  // Pointer Drag handlers
+  const handlePointerDown = (e: React.PointerEvent, nodeId: string) => {
     e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (err) {}
     setDraggedNodeId(nodeId);
     
     // Pin node position
@@ -191,7 +194,7 @@ export const PatientHealthGraph: React.FC = () => {
     );
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     if (!draggedNodeId) return;
 
     const rect = svgRef.current?.getBoundingClientRect();
@@ -210,8 +213,11 @@ export const PatientHealthGraph: React.FC = () => {
     );
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: React.PointerEvent) => {
     if (!draggedNodeId) return;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (err) {}
     
     // Unpin node
     setNodes((prev) =>
@@ -246,9 +252,9 @@ export const PatientHealthGraph: React.FC = () => {
           width="100%"
           height={height}
           viewBox={`0 0 ${width} ${height}`}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
           style={{ overflow: 'visible' }}
         >
           {/* Render Links */}
@@ -287,7 +293,7 @@ export const PatientHealthGraph: React.FC = () => {
                 key={node.id}
                 onMouseEnter={() => setHoverNodeId(node.id)}
                 onMouseLeave={() => setHoverNodeId(null)}
-                onMouseDown={(e) => handleMouseDown(e, node.id)}
+                onPointerDown={(e) => handlePointerDown(e, node.id)}
                 style={{ cursor: 'grab', opacity, transition: 'opacity 0.2s' }}
               >
                 <circle

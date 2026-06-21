@@ -18,6 +18,7 @@ export const About: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
+        overflowX: 'hidden',
         boxSizing: 'border-box'
       }}
     >

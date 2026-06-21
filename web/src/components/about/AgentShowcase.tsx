@@ -20,7 +20,7 @@ export const AgentShowcase: React.FC = () => {
   const [selected, setSelected] = useState<number | null>(null);
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px 60px 24px', boxSizing: 'border-box' }}>
+    <div className="agent-showcase-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px 60px 24px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       <h2 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 12px 0', textAlign: 'center' }}>
         The 11-Agent Mesh
       </h2>
@@ -38,12 +38,16 @@ export const AgentShowcase: React.FC = () => {
           gap: '20px', 
           padding: '12px 4px 24px 4px',
           scrollBehavior: 'smooth',
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
           boxSizing: 'border-box'
         }}
       >
         {AGENTS.map((a, idx) => (
           <div 
             key={idx} 
+            className="agent-card-wrapper"
             style={{ 
               flex: '0 0 280px', // Prevent shrinking, maintain fixed width
               boxSizing: 'border-box'
@@ -108,6 +112,19 @@ export const AgentShowcase: React.FC = () => {
         
         [data-theme="dark"] .agent-scroll-container::-webkit-scrollbar-thumb {
           background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        @media (max-width: 768px) {
+          .agent-showcase-container {
+            padding: 0 16px 40px 16px !important;
+          }
+          .agent-scroll-container {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          .agent-card-wrapper {
+            flex: 0 0 250px !important;
+          }
         }
       `}</style>
     </div>

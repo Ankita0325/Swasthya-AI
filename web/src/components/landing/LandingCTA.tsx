@@ -22,7 +22,7 @@ export const LandingCTA: React.FC = () => {
           background: 'linear-gradient(135deg, var(--surface) 0%, var(--bg-secondary) 100%)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-lg)',
-          padding: '60px 40px',
+          padding: '60px 24px',
           textAlign: 'center',
           boxShadow: 'var(--shadow-lg)',
           boxSizing: 'border-box'

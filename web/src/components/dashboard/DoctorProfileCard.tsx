@@ -7,7 +7,7 @@ export const DoctorProfileCard: React.FC = () => {
   const { user } = useAuth();
 
   return (
-    <Card style={{ padding: '24px', display: 'flex', gap: '20px', alignItems: 'center', backgroundColor: 'var(--surface)' }}>
+    <Card style={{ padding: '24px', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap', backgroundColor: 'var(--surface)' }}>
       <div
         style={{
           width: '64px',
