@@ -318,3 +318,107 @@
   flex: 1;
   background: var(--bg-secondary);
 }
+
+/* Mobile Responsive Overrides */
+@media (max-width: 768px) {
+  .top-navbar {
+    padding: 0 16px !important;
+  }
+
+  .top-navbar .nav-links {
+    display: none !important; /* Hide dashboard top nav links on mobile */
+  }
+  
+  .top-navbar .profile-info {
+    display: none !important; /* Hide doctor profile text, keep avatar only */
+  }
+  
+  .profile-arrow {
+    display: none !important;
+  }
+
+  .main-content {
+    padding-bottom: 80px !important; /* Spacing for bottom navbar */
+  }
+
+  /* Fixed Bottom Nav Bar for Mobile */
+  .bottom-navbar {
+    display: flex !important;
+    position: fixed;
+    bottom: 12px;
+    left: 16px;
+    right: 16px;
+    height: 64px;
+    background: var(--navbar-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    z-index: 1000;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: var(--shadow-lg);
+    padding: 0 8px;
+    box-sizing: border-box;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    flex: 1;
+    position: relative;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--accent);
+  }
+
+  .bottom-nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bottom-nav-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .bottom-nav-label {
+    font-size: 10px;
+    font-weight: 700;
+  }
+  
+  .bottom-nav-indicator {
+    position: absolute;
+    bottom: 2px;
+    width: 12px;
+    height: 2px;
+    background-color: var(--accent);
+    border-radius: 99px;
+  }
+}
+
+/* Hide bottom nav on desktop */
+.bottom-navbar {
+  display: none;
+}
+
+@media (max-width: 580px) {
+  .main-content {
+    padding: 16px 12px 80px 12px !important;
+  }
+  .ui-card {
+    padding: 16px !important;
+  }
+}

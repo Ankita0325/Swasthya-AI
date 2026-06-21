@@ -51,7 +51,10 @@ const FEATURES = [
 
 export const FeatureShowcase: React.FC = () => {
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px 60px 24px', boxSizing: 'border-box' }}>
+    <div 
+      className="features-showcase-container"
+      style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px 60px 24px', boxSizing: 'border-box' }}
+    >
       <div style={{ textAlign: 'center', marginBottom: '50px' }}>
         <h2 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 12px 0' }}>
           Platform Clinical Modules
@@ -64,7 +67,7 @@ export const FeatureShowcase: React.FC = () => {
       <div 
         style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', 
           gap: '24px', 
           boxSizing: 'border-box' 
         }} 
@@ -109,6 +112,21 @@ export const FeatureShowcase: React.FC = () => {
           </Card>
         ))}
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .features-showcase-container {
+            padding: 0 16px 40px 16px !important;
+          }
+          .features-grid-responsive {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .features-showcase-container h2 {
+            font-size: 26px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

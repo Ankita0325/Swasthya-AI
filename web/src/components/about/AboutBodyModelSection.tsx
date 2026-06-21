@@ -31,7 +31,7 @@ const SAMPLE_HEATPOINTS: HeatPoint[] = [
 
 export const AboutBodyModelSection: React.FC = () => {
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px 60px 24px', boxSizing: 'border-box' }}>
+    <div className="body-model-section-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px 60px 24px', boxSizing: 'border-box' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '48px', alignItems: 'center' }} className="body-section-responsive">
         {/* Left Side: Explanatory Text */}
         <div>
@@ -77,8 +77,15 @@ export const AboutBodyModelSection: React.FC = () => {
 
       <style>{`
         @media (max-width: 768px) {
+          .body-model-section-container {
+            padding: 0 16px 40px 16px !important;
+          }
           .body-section-responsive {
             grid-template-columns: 1fr !important;
+            gap: 24px !important;
+          }
+          .body-section-responsive h2 {
+            font-size: 26px !important;
           }
         }
       `}</style>

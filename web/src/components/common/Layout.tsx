@@ -25,11 +25,12 @@ const Layout: React.FC = () => {
     { path: '/medicine', label: 'Medicine' },
     { path: '/appointments', label: 'Appointments' },
     { path: '/profile', label: 'Profile' },
+    { path: '/about', label: 'About' },
   ];
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/auth');
   };
 
   const DashboardIcon = () => (
@@ -72,12 +73,21 @@ const Layout: React.FC = () => {
     </svg>
   );
 
+  const AboutIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="16" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+  );
+
   const getNavIcon = (label: string) => {
     switch(label) {
       case 'Dashboard': return <DashboardIcon />;
       case 'Medicine': return <MedicineIcon />;
       case 'Appointments': return <AppointmentsIcon />;
       case 'Profile': return <ProfileIcon />;
+      case 'About': return <AboutIcon />;
       default: return null;
     }
   };
@@ -201,6 +211,21 @@ const Layout: React.FC = () => {
       <main className="main-content">
         <Outlet />
       </main>
+
+      {/* Fixed Bottom Navigation Bar for Mobile */}
+      <div className="bottom-navbar">
+        {navItems.map((item) => (
+          <button
+            key={item.path}
+            className={`bottom-nav-item ${location.pathname === item.path ? 'active' : ''}`}
+            onClick={() => navigate(item.path)}
+          >
+            <span className="bottom-nav-icon">{getNavIcon(item.label)}</span>
+            <span className="bottom-nav-label">{item.label}</span>
+            {location.pathname === item.path && <span className="bottom-nav-indicator" />}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };

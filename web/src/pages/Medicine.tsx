@@ -80,7 +80,7 @@ const Medicine: React.FC = () => {
 
   const formatPrice = (price: string) => {
     if (!price) return 'N/A';
-    return `₹${price}`;
+    return `${price}`;
   };
 
   // Pagination
@@ -91,9 +91,59 @@ const Medicine: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="medicine-loading">
-        <div className="spinner"></div>
-        <p>Loading medicines...</p>
+      <div className="medicine-page skeleton-page">
+        <div className="medicine-header">
+          <div>
+            <div className="skeleton skeleton-title"></div>
+            <div className="skeleton skeleton-subtitle" style={{ display: 'block' }}></div>
+          </div>
+          <div className="skeleton skeleton-btn"></div>
+        </div>
+
+        <div className="search-container">
+          <div className="skeleton skeleton-search"></div>
+        </div>
+
+        <div className="table-container">
+          <table className="medicine-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Product Name</th>
+                <th>Category</th>
+                <th>Salt Composition</th>
+                <th>Manufacturer</th>
+                <th>Price</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...Array(8)].map((_, index) => (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td>
+                    <div className="skeleton skeleton-text" style={{ width: '80%', display: 'block' }}></div>
+                  </td>
+                  <td>
+                    <div className="skeleton skeleton-badge" style={{ display: 'block' }}></div>
+                  </td>
+                  <td>
+                    <div className="skeleton skeleton-text" style={{ width: '90%', display: 'block' }}></div>
+                  </td>
+                  <td>
+                    <div className="skeleton skeleton-text" style={{ width: '70%', display: 'block' }}></div>
+                  </td>
+                  <td>
+                    <div className="skeleton skeleton-text" style={{ width: '40px', display: 'block' }}></div>
+                  </td>
+                  <td>
+                    <div className="skeleton skeleton-action" style={{ display: 'block' }}></div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }
