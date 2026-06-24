@@ -7,14 +7,15 @@ interface SectionItem {
 }
 
 const SECTIONS: SectionItem[] = [
-  { id: 'about-hero', label: 'Hero Section' },
-  { id: 'bodymap-section', label: '3D Body Model' },
+  { id: 'about-hero', label: 'Hero' },
+  { id: 'bodymap-section', label: '3D Body' },
   { id: 'patient-graph-section', label: 'Patient Graph' },
   { id: 'family-graph-section', label: 'Family Warning' },
-  { id: 'modules-section', label: 'Clinical Modules' },
-  { id: 'agents-section', label: '11-Agent Mesh' },
+  { id: 'modules-section', label: 'Modules' },
+  { id: 'agents-section', label: 'Agents' },
   { id: 'techstack-section', label: 'Tech Stack' },
-  { id: 'faq-section', label: 'FAQs' }
+  { id: 'tracks-section', label: 'Dev Tracks' },
+  { id: 'faq-section', label: 'FAQ' }
 ];
 
 export const ScrollNavigator: React.FC = () => {
@@ -32,34 +33,60 @@ export const ScrollNavigator: React.FC = () => {
       
       const totalHeight = scrollHeight - clientHeight;
       if (totalHeight > 0) {
-        // Clamp between 0 and 1
         setScrollProgress(Math.min(Math.max(scrollTop / totalHeight, 0), 1));
       } else {
         setScrollProgress(0);
       }
 
       let currentSection = SECTIONS[0].id;
+      let closestDistance = Infinity;
+      
+      // Look at the upper-middle part of the screen (40% down from the top)
+      const viewportCenter = window.innerHeight * 0.4;
+
       for (const section of SECTIONS) {
         const el = document.getElementById(section.id);
         if (el) {
           const rect = el.getBoundingClientRect();
-          if (rect.top <= window.innerHeight * 0.45) {
+          
+          // 1. Ideal Case: The section overlaps our viewport center mark
+          if (rect.top <= viewportCenter && rect.bottom >= viewportCenter) {
+            currentSection = section.id;
+            closestDistance = 0;
+            break;
+          }
+          
+          // 2. Fallback Case: Find the section closest to our mark
+          const distanceToCenter = Math.min(
+            Math.abs(rect.top - viewportCenter),
+            Math.abs(rect.bottom - viewportCenter)
+          );
+
+          if (distanceToCenter < closestDistance) {
+            closestDistance = distanceToCenter;
             currentSection = section.id;
           }
         }
       }
+
+      // If we're near the absolute bottom, force the last section to be active
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        currentSection = SECTIONS[SECTIONS.length - 1].id;
+      }
+
       setActiveSection(currentSection);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    document.addEventListener('scroll', handleScroll, { passive: true });
-    
     handleScroll();
-    const timeoutId = setTimeout(handleScroll, 200);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    const resizeObserver = new ResizeObserver(handleScroll);
+    resizeObserver.observe(document.body);
+    const timeoutId = setTimeout(handleScroll, 500);
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('scroll', handleScroll);
+      resizeObserver.disconnect();
       clearTimeout(timeoutId);
     };
   }, []);
@@ -67,39 +94,36 @@ export const ScrollNavigator: React.FC = () => {
   const handleScrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      const offset = 80;
+      const elementPosition = el.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
     }
   };
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        right: '32px',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        zIndex: 100,
-        pointerEvents: 'none'
-      }}
-      className="scroll-navigator-fixed"
-    >
-      {/* Background Track */}
+    <div className="scroll-navigator-container">
+      {/* Expanding Glass Morphism Background Card */}
+      <div className="glass-card-bg" />
+
+      {/* Progress Track Background */}
       <div 
         style={{
           position: 'absolute',
-          top: '10px',
-          bottom: '10px',
-          right: '6px', // Aligned perfectly with the center of the 14px dots
+          top: '20px',
+          bottom: '20px',
+          right: '23px',
           width: '2px',
-          backgroundColor: 'var(--border, rgba(150, 150, 150, 0.2))',
+          backgroundColor: 'rgba(128, 128, 128, 0.2)', // Adjusted to work on both themes
           borderRadius: '4px',
           zIndex: 0
         }}
       >
-        {/* Animated Progress Line (Hardware Accelerated) */}
+        {/* Animated Progress Fill */}
         <div 
           style={{
             width: '100%',
@@ -108,22 +132,21 @@ export const ScrollNavigator: React.FC = () => {
             borderRadius: '4px',
             transformOrigin: 'top',
             transform: `scaleY(${scrollProgress})`,
-            boxShadow: '0 0 10px rgba(0, 102, 255, 0.6)',
+            boxShadow: '0 0 15px rgba(0, 102, 255, 0.8), 0 0 30px rgba(0, 102, 255, 0.4)',
             transition: 'transform 0.1s linear'
           }}
         />
       </div>
 
-      {/* Nodes / Dots */}
+      {/* Interactive Nodes / Dots */}
       <div 
         style={{
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          height: '320px',
+          height: '400px',
           position: 'relative',
           zIndex: 1,
-          pointerEvents: 'auto'
         }}
       >
         {SECTIONS.map((sec, idx) => {
@@ -134,46 +157,24 @@ export const ScrollNavigator: React.FC = () => {
           return (
             <div 
               key={sec.id}
+              onClick={() => handleScrollTo(sec.id)}
+              className="scroll-nav-node-wrapper"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'flex-end',
-                position: 'relative',
+                height: '28px',
                 cursor: 'pointer',
-                width: '180px',
-                height: '24px' // Gives a slightly taller hit-area for clicking
               }}
-              onClick={() => handleScrollTo(sec.id)}
-              className="scroll-nav-node-wrapper group"
             >
-              {/* Tooltip Label */}
-              <span 
-                className="scroll-nav-label"
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  letterSpacing: '0.3px',
-                  color: isActive ? '#FFFFFF' : 'var(--text-secondary, #888)',
-                  marginRight: '16px',
-                  backgroundColor: isActive ? 'rgba(0, 102, 255, 0.95)' : 'var(--surface, rgba(255, 255, 255, 0.8))',
-                  backdropFilter: 'blur(8px)',
-                  border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border, #eaeaea)',
-                  padding: '5px 12px',
-                  borderRadius: '8px',
-                  opacity: isActive ? 1 : 0,
-                  transform: isActive ? 'translateX(0) scale(1)' : 'translateX(10px) scale(0.95)',
-                  transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)', // Spring-like easing
-                  pointerEvents: 'none',
-                  boxShadow: isActive ? '0 4px 14px rgba(0, 102, 255, 0.3)' : '0 2px 8px rgba(0,0,0,0.05)',
-                  whiteSpace: 'nowrap'
-                }}
-              >
+              {/* Text Label */}
+              <span className={`scroll-nav-label ${isActive ? 'active' : ''}`}>
                 {sec.label}
               </span>
 
-              {/* Node Dot Container (keeps dot centered during scale) */}
+              {/* Node Dot Container */}
               <div style={{
-                width: '14px', 
+                width: '16px', 
                 display: 'flex', 
                 justifyContent: 'center', 
                 alignItems: 'center',
@@ -183,12 +184,23 @@ export const ScrollNavigator: React.FC = () => {
                 <div 
                   className={isActive ? 'active-pulse' : ''}
                   style={{
-                    width: isActive ? '12px' : '8px',
-                    height: isActive ? '12px' : '8px',
+                    width: isActive ? '14px' : (isFilled ? '10px' : '8px'),
+                    height: isActive ? '14px' : (isFilled ? '10px' : '8px'),
                     borderRadius: '50%',
-                    backgroundColor: isFilled ? '#0066FF' : 'var(--surface, #fff)',
-                    border: isFilled ? 'none' : '2px solid var(--border, #ccc)',
+                    background: isActive 
+                      ? 'linear-gradient(135deg, #0066FF, #0099FF)'
+                      : (isFilled 
+                        ? 'linear-gradient(135deg, #0066FF, #0099FF)' 
+                        : 'rgba(128, 128, 128, 0.3)'),
+                    border: isActive 
+                      ? '2px solid rgba(255, 255, 255, 0.9)' 
+                      : (isFilled ? 'none' : '1px solid rgba(128, 128, 128, 0.4)'),
                     transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    boxShadow: isActive 
+                      ? '0 0 15px rgba(0, 102, 255, 0.8), 0 0 30px rgba(0, 102, 255, 0.4)' 
+                      : (isFilled 
+                        ? '0 0 10px rgba(0, 102, 255, 0.4)' 
+                        : 'none'),
                   }}
                 />
               </div>
@@ -198,33 +210,129 @@ export const ScrollNavigator: React.FC = () => {
       </div>
 
       <style>{`
-        /* Hover state for non-active labels */
-        .scroll-nav-node-wrapper:hover .scroll-nav-label {
-          opacity: 1 !important;
-          transform: translateX(0) scale(1) !important;
-        }
-        
-        /* Click interaction scale */
-        .scroll-nav-node-wrapper:active {
-          transform: scale(0.96);
-          transition: transform 0.1s ease;
-        }
-
-        /* Subtle pulse for the active dot */
-        @keyframes pulse-ring {
-          0% { box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.6); }
-          100% { box-shadow: 0 0 0 8px rgba(0, 102, 255, 0); }
-        }
-        
-        .active-pulse {
-          animation: pulse-ring 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+        /* Master Container Styling */
+        .scroll-navigator-container {
+          position: fixed;
+          right: 32px;
+          top: 50%;
+          transform: translateY(-50%);
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          z-index: 100;
+          padding: 20px 16px;
         }
 
         @media (max-width: 1024px) {
-          .scroll-navigator-fixed {
+          .scroll-navigator-container {
             display: none !important;
           }
         }
+
+        /* Default Thin Glass Background (Light Theme Base) */
+        .glass-card-bg {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          right: 0;
+          width: 48px;
+          background: rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          border-radius: 24px;
+          z-index: -1;
+          transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Hover Expansion for the Glass Card (Light Theme Base) */
+        .scroll-navigator-container:hover .glass-card-bg {
+          width: 180px;
+          background: rgba(255, 255, 255, 0.85); /* Bright background for black text */
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        /* Label Default State (Light Theme Base) */
+        .scroll-nav-label {
+          opacity: 0;
+          transform: translateX(10px);
+          transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+          pointer-events: none;
+          font-size: 13px;
+          font-weight: 500;
+          letter-spacing: 0.5px;
+          margin-right: 16px;
+          white-space: nowrap;
+          color: rgba(0, 0, 0, 0.6); /* Black text */
+        }
+
+        /* Active Label State */
+        .scroll-nav-label.active {
+          opacity: 1;
+          transform: translateX(0);
+          color: #000000; /* Pure black when active */
+          font-weight: 700;
+        }
+
+        .scroll-navigator-container:hover .scroll-nav-label {
+          opacity: 1;
+          transform: translateX(0);
+        }
+
+        .scroll-nav-node-wrapper:hover .scroll-nav-label {
+          color: #0066FF !important;
+          text-shadow: none !important;
+        }
+
+        .scroll-nav-node-wrapper:active {
+          transform: scale(0.95);
+          transition: transform 0.1s ease;
+        }
+
+        /* Active dot glowing pulse */
+        @keyframes pulse-ring {
+          0% { box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.6), 0 0 15px rgba(0, 102, 255, 0.6); }
+          70% { box-shadow: 0 0 0 12px rgba(0, 102, 255, 0), 0 0 30px rgba(0, 102, 255, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(0, 102, 255, 0), 0 0 15px rgba(0, 102, 255, 0.6); }
+        }
+        
+        .active-pulse {
+          animation: pulse-ring 2.5s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+
+        /* =========================================
+           DARK MODE OVERRIDES 
+           (Supports standard OS themes & standard .dark classes)
+           ========================================= */
+        @media (prefers-color-scheme: dark) {
+          .glass-card-bg {
+            background: rgba(15, 20, 30, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+          }
+          .scroll-navigator-container:hover .glass-card-bg {
+            background: rgba(15, 20, 30, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          }
+          .scroll-nav-label {
+            color: rgba(255, 255, 255, 0.6); /* White text */
+          }
+          .scroll-nav-label.active {
+            color: #FFFFFF;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+          }
+          .scroll-nav-node-wrapper:hover .scroll-nav-label {
+            text-shadow: 0 0 10px rgba(0, 102, 255, 0.4) !important;
+          }
+        }
+
+        /* Tailwind / class-based dark mode specific overrides */
+        :global(.dark) .glass-card-bg { background: rgba(15, 20, 30, 0.3); border: 1px solid rgba(255, 255, 255, 0.08); }
+        :global(.dark) .scroll-navigator-container:hover .glass-card-bg { background: rgba(15, 20, 30, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); }
+        :global(.dark) .scroll-nav-label { color: rgba(255, 255, 255, 0.6); }
+        :global(.dark) .scroll-nav-label.active { color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
       `}</style>
     </div>
   );

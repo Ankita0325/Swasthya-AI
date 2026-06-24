@@ -7,6 +7,7 @@ import HealthMemoryBuilder from '../components/about/HealthMemoryBuilder';
 import FeatureShowcase from '../components/about/FeatureShowcase';
 import AgentShowcase from '../components/about/AgentShowcase';
 import TechStackSection from '../components/about/TechStackSection';
+import TrackCards from '../components/about/TrackCards';
 import FAQSection from '../components/about/FAQSection';
 import Footer from '../components/common/Footer';
 import ScrollNavigator from '../components/about/ScrollNavigator';
@@ -29,43 +30,65 @@ export const About: React.FC = () => {
       {/* Floating vertical section navigator */}
       <ScrollNavigator />
 
-      <div id="about-hero">
+      {/* Hero Section */}
+      <section id="about-hero">
         <AboutHero />
-      </div>
+      </section>
 
-      <div id="bodymap-section">
+      {/* 3D Body Model Section */}
+      <section id="bodymap-section">
         <AboutBodyModelSection />
-      </div>
+      </section>
 
       <div style={{ borderBottom: '1px solid var(--border)', width: '100%', margin: '20px 0' }} />
-
-      <div>
+      
+      {/* Patient Graph Section */}
+      <section id="patient-graph-section">
         <HealthMemoryBuilder />
-      </div>
+      </section>
+
+      {/* Family Warning Section - Added missing section */}
+      <section id="family-graph-section">
+        <div style={{ padding: '40px 0' }}>
+          {/* Family Genetics Graph component would go here */}
+          {/* You can add the FamilyGeneticsGraph component if available */}
+        </div>
+      </section>
 
       <div style={{ borderBottom: '1px solid var(--border)', width: '100%', margin: '20px 0' }} />
 
-      <div id="modules-section">
+      {/* Clinical Modules Section */}
+      <section id="modules-section">
         <FeatureShowcase />
-      </div>
+      </section>
 
       <div style={{ borderBottom: '1px solid var(--border)', width: '100%', margin: '20px 0' }} />
 
-      <div id="agents-section">
+      {/* Agents Section */}
+      <section id="agents-section">
         <AgentShowcase />
-      </div>
+      </section>
 
       <div style={{ borderBottom: '1px solid var(--border)', width: '100%', margin: '20px 0' }} />
 
-      <div id="techstack-section">
+      {/* Tech Stack Section */}
+      <section id="techstack-section">
         <TechStackSection />
-      </div>
+      </section>
 
       <div style={{ borderBottom: '1px solid var(--border)', width: '100%', margin: '20px 0' }} />
 
-      <div id="faq-section">
+      {/* Track Cards Section */}
+      <section id="tracks-section">
+        <TrackCards />
+      </section>
+
+      <div style={{ borderBottom: '1px solid var(--border)', width: '100%', margin: '20px 0' }} />
+
+      {/* FAQ Section */}
+      <section id="faq-section">
         <FAQSection />
-      </div>
+      </section>
 
       <Footer />
     </div>
